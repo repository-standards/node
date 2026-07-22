@@ -1,0 +1,36 @@
+# Deploys this stack's site (landing + docs rendered by the CORE's generator -
+# one form, many sites). Needs both repos public + Pages enabled (Source: Actions).
+name: pages
+# DISABLED for now (owner call): manual trigger only. To go live, restore the
+# push trigger below and enable Pages (Settings -> Pages -> Source: GitHub Actions).
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: bodurkalukasz/repository-standards
+          path: .core-tools
+          sparse-checkout: tools
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node .core-tools/tools/docsite.mjs
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,17 @@
+{
+  "$about": "This repo's site in the ecosystem's shared form - rendered by the CORE's tools/docsite.mjs (one form, many sites, zero copied generators). Run from this repo's root with a checkout of the core beside it: node ../repository-standards/tools/docsite.mjs",
+  "brand": "repository-standards-node",
+  "repo_url": "https://github.com/bodurkalukasz/repository-standards-node",
+  "out_dir": "site/docs",
+  "topbar": [
+    { "label": "Standard ↗", "href": "https://github.com/bodurkalukasz/repository-standards", "external": true },
+    { "label": "Landing", "href": "../index.html" },
+    { "label": "Docs", "href": "index.html", "on": true }
+  ],
+  "pages": [
+    { "src": "README.md", "out": "index.html", "nav": "Home", "group": null },
+    { "src": "DECISIONS.md", "out": "decisions.html", "nav": "The decisions", "group": null },
+    { "src": "ADAPTING.md", "out": "adapting.html", "nav": "Adapting a brownfield", "group": null },
+    { "src": "starter/README.md", "out": "starter.html", "nav": "The starter", "group": null }
+  ]
+}
