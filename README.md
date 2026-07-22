@@ -1,5 +1,10 @@
 # repository-standards-node
 
+> Part of the repository-standards ecosystem:
+> [the standard](https://github.com/bodurkalukasz/repository-standards) is the
+> engine, this repo is the Node map pack. How it fits:
+> [docs/ecosystem.md](https://github.com/bodurkalukasz/repository-standards/blob/main/docs/ecosystem.md).
+
 Technology best practices for Node/TypeScript, riding on
 [repository-standards](https://github.com/bodurkalukasz/repository-standards) -
 the stack layer (Layer 2) of the standard, split out so technology picks can move
@@ -16,6 +21,7 @@ inside this repo, never a sibling repo. Compatibility is one line in
 | [`DECISIONS.md`](DECISIONS.md) | the why per axis - pick, rationale, escape hatch; summary table first |
 | [`starter/`](starter/) | the boot-verified monorepo: Next.js + Fastify through one proxy, Better Auth, tiered tests |
 | [`stack.manifest.json`](stack.manifest.json) | the stack contract AND manifest: technology, core-spec range, registry back-pointer, and the file-by-file entries the align engine reads |
+| [`ADAPTING.md`](ADAPTING.md) | per-entry migration notes for brownfield repos - from theirs to ours without breaking the build |
 
 ## Greenfield
 
