@@ -127,3 +127,19 @@ source. Tailwind is the recorded escape hatch for teams already living in it.
 
 All three are assembled and boot-verified in [`starter/`](starter/): `pnpm i && pnpm dev`
 boots web + api wired through the proxy with Better Auth in place.
+
+## Open questions - decided, provisionally
+
+The stack owns its own doubts (the core's open-questions catalog explains the
+genre: a standing "I chose X, convince me of Y").
+
+- **Better Auth as the product-auth default.** Decided in #10 - the 2026
+  community default, and it now maintains Auth.js; `openid-client` for
+  enterprise SSO is field-proven. Doubt: Better Auth here is proven by one boot,
+  not by fleets. Better: field evidence beyond the starter - evidence over
+  consensus.
+- **CSS Modules + SCSS over Tailwind.** Decided in #10 - matches the evidence
+  repos; Tailwind is the recorded escape hatch. Doubt: a large slice of the 2026
+  ecosystem defaults to Tailwind; this is the closest pick to taste in the whole
+  stack. Better: a criterion that makes the choice situational (team,
+  design-system maturity) instead of one paved road.

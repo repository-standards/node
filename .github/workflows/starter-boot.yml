@@ -1,0 +1,28 @@
+# This repo's OWN gate: the starter must stay boot-verified, not boot-verified-once.
+# (starter/.github/workflows/ are TEMPLATES an adopter enables in their repo.)
+name: starter-boot
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # weekly heartbeat - the claim needs a pulse
+jobs:
+  boot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: starter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: starter/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: starter/.nvmrc
+          cache: pnpm
+          cache-dependency-path: starter/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test:unit
