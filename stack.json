@@ -1,7 +1,0 @@
-{
-  "$about": "The stack contract (repository-standards registry model): this repo implements technology best practices for the technology below, against the declared core-spec range. The registry entry in the core repo points here; this file points back.",
-  "technology": "node",
-  "description": "Node/TypeScript best practices - Next.js + Fastify through one proxy, Better Auth, tiered testing; distilled from production repos and boot-verified",
-  "standards": ">=0.8 <1",
-  "registry": "bodurkalukasz/repository-standards"
-}

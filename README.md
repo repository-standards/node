@@ -7,7 +7,7 @@ at technology speed while the methodology stays still.
 
 One stack per technology, by policy: variation is a profile or an adoption mode
 inside this repo, never a sibling repo. Compatibility is one line in
-[`stack.json`](stack.json): `standards: ">=0.8 <1"`.
+[`stack.manifest.json`](stack.manifest.json): `standards: ">=0.8 <1"` - the same manifest schema the core engine reads, so a brownfield repo is walked to this stack the way it is walked to the core: entry by entry, waves, one drift number.
 
 ## What is here
 
@@ -15,7 +15,7 @@ inside this repo, never a sibling repo. Compatibility is one line in
 |---|---|
 | [`DECISIONS.md`](DECISIONS.md) | the why per axis - pick, rationale, escape hatch; summary table first |
 | [`starter/`](starter/) | the boot-verified monorepo: Next.js + Fastify through one proxy, Better Auth, tiered tests |
-| [`stack.json`](stack.json) | the stack contract: technology, core-spec range, back-pointer to the registry |
+| [`stack.manifest.json`](stack.manifest.json) | the stack contract AND manifest: technology, core-spec range, registry back-pointer, and the file-by-file entries the align engine reads |
 
 ## Greenfield
 
@@ -39,4 +39,4 @@ Adapt, never blind-copy - the same rule the core standard runs on.
 
 This repo's own CI boots the starter weekly (`starter-boot.yml`) - "boot-verified"
 is a pulse, not a plaque. Core moves, this repo chases: when the core spec range
-in `stack.json` falls behind, that is this repo's bug, never the core's.
+in `stack.manifest.json` falls behind, that is this repo's bug, never the core's.
