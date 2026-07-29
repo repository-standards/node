@@ -24,6 +24,11 @@ not a cage.
 | Auth | Better Auth (product) / `openid-client` module (enterprise SSO) | - |
 | Proxy | Next `proxy.ts` (Node runtime) + rewrites -> Fastify | - |
 | Styling | CSS Modules + SCSS, DTCG three-tier tokens | Tailwind, superseded locally per ADR-004 |
+| Dependency updates | Renovate, pin-everything, 7-day cooldown, grouped minor/patch | Dependabot when the org already lives in it |
+| Logging | pino, JSON lines to stdout, redacted at the edge | structured console in edge/serverless contexts |
+| Request validation | Zod at the Fastify boundary via type provider | `@fastify/type-provider-typebox` for OpenAPI needs |
+| Datastore + query layer | per-repo ADR (Postgres default; Drizzle/Kysely/Prisma fork) | - |
+| Containers + deploy | container-ready shape ships; Dockerfile + target per-repo ADR | - |
 
 ## 1. Package manager - pnpm
 
@@ -78,9 +83,14 @@ config story in practice.
 
 ## 7. Next.js - App Router, standalone, typed config
 
-**Pick:** App Router, `output: "standalone"`, a typed `next.config.ts` carrying real
-CSP/security headers, React 19 for greenfield. Never `typescript.ignoreBuildErrors` -
-it is an anti-pattern observed in the wild, not a config option.
+**Pick:** App Router, `output: "standalone"`, a typed `next.config.ts` carrying the
+security headers plus a **report-only CSP baseline** - it observes without ever
+breaking the app, and its report is the enforcement worklist. Enforcing CSP is a
+per-app step: per-request nonces plumbed through `proxy.ts` (it runs per request on
+the Node runtime; Next picks the nonce up for its own inline scripts) - the config
+comment carries the recipe. React 19 for greenfield. Never
+`typescript.ignoreBuildErrors` - it is an anti-pattern observed in the wild, not a
+config option.
 
 ## 8. Supply-chain cooldown - 7 days
 
@@ -144,6 +154,80 @@ expensive to retrofit after the fleet copies the loose version.
 **Escape hatch:** another CI vendor or self-hosted runners when the org mandates them -
 keep the same shape (least-privilege, frozen installs, pinned steps); the shape is the
 decision, the vendor is not.
+
+## 12. Dependency updates - Renovate, riding the cooldown
+
+**Pick:** Renovate - `config:recommended` base, pin-everything range strategy,
+`minimumReleaseAge: "7 days"` mirroring the pnpm cooldown (#8), minor/patch updates
+grouped, labels on. The starter's [`renovate.json`](starter/renovate.json) is the
+reference copy.
+
+**Why:** exact-pin-everything without update automation is how repos age in place - the
+pinning axis (#8 and the core standard's exact-pin rule) makes an update *chore*
+mandatory, Renovate makes it happen as reviewed diffs.
+
+**Escape hatch:** Dependabot when the org already lives in it - keep the cooldown and
+the pin strategy either way.
+
+## 13. Logging - pino, one JSON line per event, redacted at the edge
+
+**Pick:** pino as the one log shape - it is already Fastify's engine; logs go to stdout
+as JSON lines (the platform aggregates; the app never writes files); secrets and
+session material are redacted at the logger config (authorization/cookie headers);
+request-id correlation on. The web app does not log to the browser console (Biome's
+`noConsole` is an error) - user-facing failures surface in the UI, server truth lives
+in the API's log.
+
+**Why:** one shape means one query language in any aggregator; redaction at the edge
+means a leaked log is not a leaked session.
+
+**Escape hatch:** a different transport/aggregator is config, not a new logger;
+structured console in edge/serverless contexts where pino's stream model does not fit.
+
+## 14. Request validation - Zod at the boundary
+
+**Pick:** Zod schemas validate every request body/query at the Fastify boundary via
+`fastify-type-provider-zod` - the same library and pattern the env schema (#6) already
+establishes; handlers receive typed, validated input or the request 400s before any
+logic runs. The starter currently ships no body-carrying route - this axis pre-decides
+the tool so the first POST does not improvise; the env schema is the worked example of
+the pattern.
+
+**Why:** validation duplicated per-handler drifts; a type provider makes the schema the
+single source of both runtime check and static type.
+
+**Escape hatch:** `@fastify/type-provider-typebox` when JSON-schema output matters more
+than Zod ergonomics (OpenAPI generation).
+
+## 15. Datastore, query layer and migrations - decided per repo, by ADR
+
+**Pick:** deliberately NOT decided here - this is the fork the core standard's decision
+checklist makes every repo record for itself (datastore, schema evolution). The
+paved-road guidance the ADR starts from: Postgres is the default datastore (the
+test-stack ships it; the auth package documents the swap and the integration test
+proves it); the query layer is the real fork - Drizzle (SQL-first, migrations from
+schema diffs), Kysely (query builder, bring your own migrations), Prisma (schema DSL,
+heaviest but most guided) - one ADR, three options, pick by the team's SQL fluency; the
+migration tool follows the query-layer choice; Better Auth's tables ride its own
+migrator regardless.
+
+**Why deferred:** any pick here would be taste dressed as evidence - the axes above are
+distilled from production repos, this one genuinely varies by product shape (read/write
+mix, multi-tenancy, reporting). A recorded per-repo ADR beats a hollow default.
+
+## 16. Containers and deploy - the shape is decided, the target is a per-repo ADR
+
+**Pick:** the container-ready shape ships (Next `output: "standalone"`, the api runs
+plain node, both log to stdout, config is env-only) - but no Dockerfile and no deploy
+target: that is a per-repo ADR. What the ADR must cover: base image pinned by digest
+(the exact-pin rule reaches images), a non-root user, healthcheck endpoints (the api
+already has `/api/health` and `/api/ready`), env injection per environment, and where
+the two processes run relative to each other (one origin via the proxy vs split).
+
+**Why deferred:** the deploy target is the least portable decision a repo makes - the
+starter refusing to fake one keeps the boot honest.
+
+**Escape hatch:** none needed - this axis IS the escape hatch, recorded.
 
 ## Open questions - decided, provisionally
 

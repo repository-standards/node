@@ -9,7 +9,25 @@ import type { NextConfig } from "next";
 // the only public origin - the browser talks to :3000 and Next proxies /api/* through.
 const API_ORIGIN = process.env.API_ORIGIN ?? "http://127.0.0.1:4000";
 
+// CSP ships REPORT-ONLY: it observes without ever breaking the app, and the report
+// is your worklist for enforcement. Enforcing needs per-request nonces plumbed
+// through the proxy (proxy.ts runs per request on the Node runtime - generate a
+// nonce there, set the enforced CSP header, and Next picks the nonce up for its own
+// inline scripts). 'unsafe-inline' below covers Next's style handling until then.
+const cspReportOnly = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 const securityHeaders = [
+  { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

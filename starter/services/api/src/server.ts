@@ -17,7 +17,15 @@ import { meRoutes } from "./routes/me.ts";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: { level: config.LOG_LEVEL },
+    logger: {
+      level: config.LOG_LEVEL,
+      // Redacted at the edge (DECISIONS.md #13): a leaked log line must never be a
+      // leaked session. Headers are the only place secrets transit this service.
+      redact: {
+        paths: ["req.headers.authorization", "req.headers.cookie", 'res.headers["set-cookie"]'],
+        censor: "[redacted]",
+      },
+    },
     disableRequestLogging: true, // we log via the onResponse hook below, with our own shape
   });
 

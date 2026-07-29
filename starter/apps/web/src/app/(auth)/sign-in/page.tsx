@@ -25,9 +25,13 @@ export default function SignInPage() {
       setPending(false);
       return;
     }
-    // The proxy gate appends ?next=<original path> when it redirects here.
+    // The proxy gate appends ?next=<original path> when it redirects here. Same-origin
+    // only: "//evil.example" and "/\\evil.example" are protocol-relative and would
+    // navigate off-site - the classic open-redirect. Paths only, or the default.
     const nextPath = new URLSearchParams(window.location.search).get("next") ?? "/dashboard";
-    router.push(nextPath.startsWith("/") ? nextPath : "/dashboard");
+    const isSafePath =
+      nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.startsWith("/\\");
+    router.push(isSafePath ? nextPath : "/dashboard");
     router.refresh();
   }
 
