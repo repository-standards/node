@@ -1,5 +1,6 @@
-# pnpm workspace - the paved-road monorepo shape (see ../pnpm-workspace.yaml for the
-# annotated original; policy is identical).
+# pnpm workspace - the paved-road monorepo shape. This file IS the reference copy
+# (stack.manifest.json points brownfield merges here); the policy block below is
+# the point - the workspace globs are the trivial part.
 
 packages:
   - 'apps/*'

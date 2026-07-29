@@ -1,4 +1,4 @@
-// Env config, validated once at boot with Zod (see ../../DECISIONS.md #5). Fail fast and
+// Env config, validated once at boot with Zod (see ../../DECISIONS.md #6). Fail fast and
 // loud on a bad environment rather than crashing deep in a request. Import `config`
 // anywhere; it is frozen.
 

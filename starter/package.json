@@ -11,7 +11,7 @@
     "dev": "pnpm db:init && turbo run dev",
     "db:init": "pnpm --filter @starter/auth db:init",
     "build": "turbo run build",
-    "check:all": "turbo run check:format check:types check:lint",
+    "check:all": "turbo run check:format check:types check:lint && pnpm check:format:styles",
     "check:types": "turbo run check:types",
     "check:lint": "turbo run check:lint",
     "check:format": "turbo run check:format",

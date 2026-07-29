@@ -1,5 +1,5 @@
 // Next.js App Router config - typed, standalone output for lean container images, and
-// security headers on by default (see ../../DECISIONS.md #6). Never set
+// security headers on by default (see ../../DECISIONS.md #7). Never set
 // typescript.ignoreBuildErrors.
 
 import path from "node:path";

@@ -128,6 +128,23 @@ source. Tailwind is the recorded escape hatch for teams already living in it.
 All three are assembled and boot-verified in [`starter/`](starter/): `pnpm i && pnpm dev`
 boots web + api wired through the proxy with Better Auth in place.
 
+## 11. CI - least-privilege, cached, frozen, pinned
+
+**Pick:** GitHub Actions with explicit least-privilege `permissions:` per workflow
+(`contents: read` unless a job proves it needs more), pnpm + Turbo caches, installs
+with `--frozen-lockfile`, and every action pinned by full commit SHA with a version
+comment (the core standard's exact-pinning rule, ADR-017 there). Two workflows, two
+speeds: a fast quality gate on every push (`check:all` + unit), the full e2e tier
+gating release.
+
+**Why:** the workflow file is the most-copied file in any repo - whatever it does
+becomes the org's habit. Least-privilege and SHA pins cost nothing on day one and are
+expensive to retrofit after the fleet copies the loose version.
+
+**Escape hatch:** another CI vendor or self-hosted runners when the org mandates them -
+keep the same shape (least-privilege, frozen installs, pinned steps); the shape is the
+decision, the vendor is not.
+
 ## Open questions - decided, provisionally
 
 The stack owns its own doubts (the core's open-questions catalog explains the

@@ -1,7 +1,7 @@
 # E2E (Playwright) + integration + advisory Lighthouse. A TEMPLATE for an adopting repo
 # (this file does not run in the standard's own repo). Separate from ci.yml's fast
 # quality gate: this tier is slower (boots the Docker test-stack and the app), so it runs
-# on its own and is the one you gate a release on. Hardened per DECISIONS.md #8 (explicit
+# on its own and is the one you gate a release on. Hardened per DECISIONS.md #11 (explicit
 # least-privilege permissions, pnpm cache, frozen lockfile); pin third-party actions by SHA.
 
 name: e2e

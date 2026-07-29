@@ -4,7 +4,10 @@
 //
 // Starter note: webServer boots the DEV servers (`pnpm dev` = db init + web + api via
 // turbo) so e2e is zero-config on a fresh clone. A production-grade repo points this at
-// the BUILT app instead (`pnpm --filter web start`) - see the stack root's config.
+// the BUILT app instead - swap the webServer commands for e.g.:
+//   { command: "pnpm --filter @starter/api start", url: "http://127.0.0.1:4000/api/health" },
+//   { command: "pnpm --filter web start", url: "http://127.0.0.1:3000" }
+// (build first; CI sets E2E_BASE_URL to skip local boot entirely).
 
 import { defineConfig, devices } from "@playwright/test";
 

@@ -5,7 +5,6 @@
     "moduleResolution": "nodenext",
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "noImplicitOverride": true,
     "types": ["node"]
   },
   "include": ["src/**/*.ts"]

@@ -1,7 +1,7 @@
 # Quality gate - format + types + lint, Turbo-cached. A TEMPLATE for an adopting repo
 # (this file does not run in the standard's own repo).
 #
-# Hardened per DECISIONS.md #8: explicit least-privilege permissions (the one place the
+# Hardened per DECISIONS.md #11: explicit least-privilege permissions (the one place the
 # standard improves on stayget, whose ci.yml had no top-level permissions block), pnpm
 # store cache, and a frozen lockfile. Further hardening: pin third-party actions by SHA.
 

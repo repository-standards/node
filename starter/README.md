@@ -1,8 +1,9 @@
 # Greenfield starter - the Layer-2 paved road, runnable
 
-A self-contained monorepo that boots on a fresh clone. It assembles the stack's
-templates (`../templates/`) and decisions (`../DECISIONS.md`) into a working app - no
-placeholders, no "wire this up yourself".
+A self-contained monorepo that boots on a fresh clone. It implements the stack's
+decisions (`../DECISIONS.md`) as a working app - and doubles as the reference copy
+of every merge-class config (`../stack.manifest.json`) - no placeholders, no
+"wire this up yourself".
 
 ```sh
 nvm use        # Node 24 (.nvmrc)
@@ -16,14 +17,14 @@ Open <http://localhost:3000>, create an account, land on the protected dashboard
 
 | Piece | Where | The decision behind it |
 |---|---|---|
-| Next.js 16 App Router, React 19, typed `next.config.ts` with security headers, `output: "standalone"` | `apps/web` | DECISIONS #6 |
-| Fastify 5, native plugin DI (no container), Zod-validated env at boot | `services/api` | DECISIONS #5 |
+| Next.js 16 App Router, React 19, typed `next.config.ts` with security headers, `output: "standalone"` | `apps/web` | DECISIONS #7 |
+| Fastify 5, native plugin DI (no container), Zod-validated env at boot | `services/api` | DECISIONS #5, #6 |
 | Better Auth - email + password, DB-backed **revocable** sessions | `packages/auth` | DECISIONS #10 |
 | Next 16 `proxy.ts` session gate (Node runtime, queries the session DB) + `/api/*` rewrites to Fastify | `apps/web/src/proxy.ts`, `next.config.ts` | DECISIONS #10 |
 | Default-deny at **both** gates - the proxy redirects, the service 401s; new routes are protected until allow-listed | `apps/web/src/lib/routes.ts`, `services/api/src/middleware/session-gate.ts` | DECISIONS #10 |
 | CSS Modules + SCSS, three-tier tokens (primitive -> semantic -> component) | `apps/web/src/app/globals.scss` + `*.module.scss` | DECISIONS #10, #3 |
 | Vitest unit tests co-located, Playwright e2e in `e2e/`, both run from the root | `pnpm test:unit`, `pnpm test:e2e` | DECISIONS #9 |
-| pnpm + Turborepo + Biome (+ Prettier for SCSS), 7-day supply-chain cooldown | root configs | DECISIONS #1-3, #7 |
+| pnpm + Turborepo + Biome (+ Prettier for SCSS), 7-day supply-chain cooldown | root configs | DECISIONS #1-3, #8, #11 |
 
 ### How a request flows
 

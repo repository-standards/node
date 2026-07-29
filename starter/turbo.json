@@ -30,9 +30,6 @@
     },
     "check:lint": {},
     "check:format": {},
-    "test:unit": {
-      "dependsOn": ["^build"]
-    },
     "dev": {
       "cache": false,
       "persistent": true
