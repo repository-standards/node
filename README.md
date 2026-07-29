@@ -12,7 +12,7 @@ at technology speed while the methodology stays still.
 
 One stack per technology, by policy: variation is a profile or an adoption mode
 inside this repo, never a sibling repo. Compatibility is one line in
-[`stack.manifest.json`](stack.manifest.json): `standards: ">=0.8 <1"` - the same manifest schema the core engine reads, so a brownfield repo is walked to this stack the way it is walked to the core: entry by entry, waves, one drift number.
+[`stack.manifest.json`](stack.manifest.json) - the same manifest schema the core engine reads, so a brownfield repo is walked to this stack the way it is walked to the core: entry by entry, waves, one drift number.
 
 ## What is here
 
@@ -20,7 +20,7 @@ inside this repo, never a sibling repo. Compatibility is one line in
 |---|---|
 | [`DECISIONS.md`](DECISIONS.md) | the why per axis - pick, rationale, escape hatch; summary table first |
 | [`starter/`](starter/) | the boot-verified monorepo: Next.js + Fastify through one proxy, Better Auth, tiered tests |
-| [`stack.manifest.json`](stack.manifest.json) | the stack contract AND manifest: technology, core-spec range, registry back-pointer, and the file-by-file entries the align engine reads |
+| [`stack.manifest.json`](stack.manifest.json) | the stack contract AND manifest: technology, registry back-pointer, and the file-by-file entries the align engine reads |
 | [`ADAPTING.md`](ADAPTING.md) | per-entry migration notes for brownfield repos - from theirs to ours without breaking the build |
 
 ## Greenfield
@@ -44,5 +44,7 @@ Adapt, never blind-copy - the same rule the core standard runs on.
 ## Staying current
 
 This repo's own CI boots the starter weekly (`starter-boot.yml`) - "boot-verified"
-is a pulse, not a plaque. Core moves, this repo chases: when the core spec range
-in `stack.manifest.json` falls behind, that is this repo's bug, never the core's.
+is a pulse, not a plaque. The link to the core is a pointer, not a version lock
+(core ADR-022): this repo depends on the core's manifest contract, which changes
+rarely and deliberately - when the core breaks it, chasing that is this repo's
+bug, never the core's.

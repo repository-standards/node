@@ -7,22 +7,41 @@ on:
   pull_request:
   schedule:
     - cron: "17 6 * * 1" # weekly heartbeat - the claim needs a pulse
+permissions:
+  contents: read
 jobs:
   boot:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: starter
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b # v5.0.0
         with:
           package_json_file: starter/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version-file: starter/.nvmrc
           cache: pnpm
           cache-dependency-path: starter/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - name: Supply-chain policy is live, not decorative
+        # The cooldown and build-script allow-list must be in pnpm's effective
+        # config - a silently-ignored key would leave the axis green and inert.
+        run: |
+          test "$(pnpm config get minimumReleaseAge)" = "10080"
+          test "$(pnpm config get enablePrePostScripts)" = "false"
+      - run: pnpm check:all
       - run: pnpm build
       - run: pnpm test:unit
+      - name: Test-stack up (integration tier)
+        run: docker compose -f docker-compose.test.yml up -d --wait
+      - run: pnpm test:integration
+      - name: Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: The marquee journey - sign-up reaches the dashboard
+        run: pnpm test:e2e
+      - name: Test-stack down
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
