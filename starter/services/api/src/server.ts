@@ -20,9 +20,17 @@ export async function buildServer(): Promise<FastifyInstance> {
     logger: {
       level: config.LOG_LEVEL,
       // Redacted at the edge (DECISIONS.md #13): a leaked log line must never be a
-      // leaked session. Headers are the only place secrets transit this service.
+      // leaked session. Fastify's default serializers log no headers - the wildcard
+      // paths catch the first hand-rolled log call that does.
       redact: {
-        paths: ["req.headers.authorization", "req.headers.cookie", 'res.headers["set-cookie"]'],
+        paths: [
+          "req.headers.authorization",
+          "req.headers.cookie",
+          'res.headers["set-cookie"]',
+          "*.headers.authorization",
+          "*.headers.cookie",
+          '*.headers["set-cookie"]',
+        ],
         censor: "[redacted]",
       },
     },

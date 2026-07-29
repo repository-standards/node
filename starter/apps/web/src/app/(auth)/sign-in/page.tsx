@@ -26,12 +26,24 @@ export default function SignInPage() {
       return;
     }
     // The proxy gate appends ?next=<original path> when it redirects here. Same-origin
-    // only: "//evil.example" and "/\\evil.example" are protocol-relative and would
-    // navigate off-site - the classic open-redirect. Paths only, or the default.
-    const nextPath = new URLSearchParams(window.location.search).get("next") ?? "/dashboard";
-    const isSafePath =
-      nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.startsWith("/\\");
-    router.push(isSafePath ? nextPath : "/dashboard");
+    // only - validated by PARSING, not prefix checks: the URL parser strips
+    // tabs/newlines and treats "\" as "/", so strings like "/%09/evil.example"
+    // defeat any startsWith filter (the classic open-redirect). Parse against our
+    // origin; keep the path only when the origin survived.
+    const nextParam = new URLSearchParams(window.location.search).get("next") || "/dashboard";
+    let nextPath = "/dashboard";
+    try {
+      const parsed = new URL(nextParam, window.location.origin);
+      if (parsed.origin === window.location.origin) {
+        // Collapse leading slashes/backslashes: a pathname like "//evil.example"
+        // would be protocol-relative when router.push re-parses it - the origin
+        // check must survive the round-trip, not just the parse.
+        nextPath = `/${(parsed.pathname + parsed.search + parsed.hash).replace(/^[/\\]+/, "")}`;
+      }
+    } catch {
+      // unparseable input keeps the default
+    }
+    router.push(nextPath);
     router.refresh();
   }
 

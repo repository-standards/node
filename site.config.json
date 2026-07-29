@@ -1,8 +1,12 @@
 {
-  "$about": "This repo's site in the ecosystem's shared form - rendered by the CORE's tools/docsite.mjs (one form, many sites, zero copied generators). Run from this repo's root with a checkout of the core beside it: node ../repository-standards/tools/docsite.mjs",
+  "$about": "This repo's site in the ecosystem's shared form - rendered by the CORE's tools/docsite.mjs (one form, many sites, zero copied generators). sidebar_links needs the core generator at or past the wizard wave - deploy after that lands on core main. Run from this repo's root with a checkout of the core beside it: node ../repository-standards/tools/docsite.mjs",
   "brand": "repository-standards-node",
   "repo_url": "https://github.com/bodurkalukasz/repository-standards-node",
   "out_dir": "site/docs",
+  "sidebar_links": [
+    { "label": "← Landing", "href": "../index.html" },
+    { "label": "The standard (Layer 1) ↗", "href": "https://github.com/bodurkalukasz/repository-standards", "external": true }
+  ],
   "topbar": [
     { "label": "Standard ↗", "href": "https://github.com/bodurkalukasz/repository-standards", "external": true },
     { "label": "Landing", "href": "../index.html" },

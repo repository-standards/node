@@ -17,7 +17,7 @@ jobs:
         working-directory: starter
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b # v5.0.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
         with:
           package_json_file: starter/package.json
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -27,11 +27,13 @@ jobs:
           cache-dependency-path: starter/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - name: Supply-chain policy is live, not decorative
-        # The cooldown and build-script allow-list must be in pnpm's effective
-        # config - a silently-ignored key would leave the axis green and inert.
+        # All three policy keys must be in pnpm's effective config - a renamed or
+        # typo'd key would leave the axis green and inert (version skew is real).
         run: |
           test "$(pnpm config get minimumReleaseAge)" = "10080"
           test "$(pnpm config get enablePrePostScripts)" = "false"
+          test "$(pnpm config get saveExact)" = "true"
+          pnpm config get allowBuilds | grep -q "esbuild"
       - run: pnpm check:all
       - run: pnpm build
       - run: pnpm test:unit
@@ -39,7 +41,7 @@ jobs:
         run: docker compose -f docker-compose.test.yml up -d --wait
       - run: pnpm test:integration
       - name: Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter e2e exec playwright install --with-deps chromium
       - name: The marquee journey - sign-up reaches the dashboard
         run: pnpm test:e2e
       - name: Test-stack down

@@ -25,3 +25,6 @@ data/
 
 # OS noise
 .DS_Store
+
+# Lighthouse CI runtime state (config lives in lighthouserc.json)
+.lighthouseci/

@@ -19,7 +19,7 @@ not a cage.
 | Env config | Zod-validated schema at boot | - |
 | Next.js | App Router, standalone, typed config + security headers | - |
 | Supply chain | 7-day `minimumReleaseAge` + `allowBuilds` | scoped exclude for critical security bumps |
-| CI | least-privilege permissions + pnpm cache + frozen lockfile | - |
+| CI | least-privilege permissions + pnpm cache + frozen lockfile | another CI vendor / self-hosted runners, same shape |
 | Testing | Vitest + Playwright + Lighthouse CI, tiered, root-orchestrated | - |
 | Auth | Better Auth (product) / `openid-client` module (enterprise SSO) | - |
 | Proxy | Next `proxy.ts` (Node runtime) + rewrites -> Fastify | - |
@@ -175,7 +175,7 @@ the pin strategy either way.
 as JSON lines (the platform aggregates; the app never writes files); secrets and
 session material are redacted at the logger config (authorization/cookie headers);
 request-id correlation on. The web app does not log to the browser console (Biome's
-`noConsole` is an error) - user-facing failures surface in the UI, server truth lives
+`noConsole` flags it, allowing only console.error/warn) - user-facing failures surface in the UI, server truth lives
 in the API's log.
 
 **Why:** one shape means one query language in any aggregator; redaction at the edge

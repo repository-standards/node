@@ -3,7 +3,7 @@
 #
 # Hardened per DECISIONS.md #11: explicit least-privilege permissions (the one place the
 # standard improves on stayget, whose ci.yml had no top-level permissions block), pnpm
-# store cache, and a frozen lockfile. Further hardening: pin third-party actions by SHA.
+# store cache, and a frozen lockfile. Actions are pinned by full commit SHA (DECISIONS.md #11).
 
 name: ci
 
@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
-      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b # v5.0.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
@@ -47,6 +47,8 @@ jobs:
 
       - name: Format, types, and lint
         run: pnpm check:all
+      - name: Unit tests (the fast tier rides the fast gate)
+        run: pnpm test:unit
 
       # Also run the standard's compliance gate if the repo is aligned:
       # - name: Self-verify

@@ -2,7 +2,7 @@
 # (this file does not run in the standard's own repo). Separate from ci.yml's fast
 # quality gate: this tier is slower (boots the Docker test-stack and the app), so it runs
 # on its own and is the one you gate a release on. Hardened per DECISIONS.md #11 (explicit
-# least-privilege permissions, pnpm cache, frozen lockfile); pin third-party actions by SHA.
+# least-privilege permissions, pnpm cache, frozen lockfile); actions are pinned by full commit SHA (DECISIONS.md #11).
 
 name: e2e
 
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
-      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b # v5.0.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
@@ -51,8 +51,7 @@ jobs:
       - name: E2E (Playwright)
         run: pnpm test:e2e
 
-      # Advisory by default - reports, does not block (lighthouserc.json). Never fails the
-      # job on its own; `|| true` keeps a flaky perf number off the critical path.
+      # Advisory by default - reports, does not block (lighthouserc.json).
       - name: Lighthouse budgets (advisory)
         # continue-on-error keeps the budget advisory WITHOUT swallowing a broken
         # invocation - a missing script or crashed run still shows red on the step.
