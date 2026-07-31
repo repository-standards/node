@@ -11,8 +11,11 @@ the stack layer (Layer 2) of the standard, split out so technology picks can mov
 at technology speed while the methodology stays still.
 
 One stack per technology, by policy: variation is a profile or an adoption mode
-inside this repo, never a sibling repo. Compatibility is one line in
-[`stack.manifest.json`](stack.manifest.json) - the same manifest schema the core engine reads, so a brownfield repo is walked to this stack the way it is walked to the core: entry by entry, waves, one drift number.
+inside this repo, never a sibling repo. The linkage to the core is one pointer in
+[`stack.manifest.json`](stack.manifest.json) (the registry back-pointer + technology) -
+never a version range or requirement: the standard is living and always latest.
+It is the same manifest schema the core engine reads, so a brownfield repo is walked
+to this stack the way it is walked to the core: entry by entry, waves, one drift number.
 
 ## What is here
 

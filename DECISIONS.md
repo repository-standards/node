@@ -112,7 +112,7 @@ tests are co-located (`*.test.ts` / `*.integration.test.ts`, split by Vitest pro
 journeys live in a top-level `e2e/` workspace package because they cross app
 boundaries. Money / security / external-contract paths are non-negotiable at the
 integration tier and above (mirrors the
-[testing-strategy catalog entry](https://github.com/bodurkalukasz/repository-standards/blob/main/standard/docs/decision-records/checklist.md)).
+[testing-strategy checklist entry](https://github.com/bodurkalukasz/repository-standards/blob/main/docs/method/checklist.md)).
 Maintenance rules: coverage is a floor on paths that matter, not a vanity percentage;
 flaky tests are quarantined with an owner, never retried-forever; a test changes in the
 same PR as its spec; if the unit suite needs Docker, it is mis-tiered.
