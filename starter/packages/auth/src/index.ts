@@ -23,9 +23,14 @@ const dbFile = process.env.AUTH_DB_PATH ?? path.resolve(process.cwd(), "../../da
 mkdirSync(path.dirname(dbFile), { recursive: true });
 
 const database = new DatabaseSync(dbFile);
-// WAL + busy timeout: the web app and the API service open this file concurrently.
-database.exec("PRAGMA journal_mode = WAL;");
+// The web app and the API service open this file concurrently - including during a build,
+// where turbo runs both package builds at once and Next collects page data for the auth
+// route. Order matters and is the whole point: switching a database to WAL takes an
+// exclusive lock, so busy_timeout has to be in force BEFORE that statement runs or it is
+// the one call with nothing to wait on. Set the other way round this raced roughly one
+// build in three: "database is locked", from the pragma meant to prevent exactly that.
 database.exec("PRAGMA busy_timeout = 5000;");
+database.exec("PRAGMA journal_mode = WAL;");
 
 export const auth = betterAuth({
   appName: "starter",
