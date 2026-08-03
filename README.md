@@ -34,13 +34,13 @@ this layer is picks and reference files, not a thing you install.
 **A new project:**
 
 ```
-start a new project on repositorystandards.com with the node stack
+> start a new project on repositorystandards.com with the node stack
 ```
 
 **A repository you already run:**
 
 ```
-take this repo onto repositorystandards.com with the node stack
+> take this repo onto repositorystandards.com with the node stack
 ```
 
 The agent reads the standard, works out which of these picks apply to what you are

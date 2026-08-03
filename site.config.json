@@ -36,28 +36,52 @@
   ],
   "pages": [
     {
-      "src": "README.md",
+      "src": "QUICKSTART.md",
       "out": "index.html",
-      "nav": "Home",
+      "nav": "Quick start",
+      "group": null
+    },
+    {
+      "src": "README.md",
+      "out": "what-this-is.html",
+      "nav": "What this is",
       "group": null
     },
     {
       "src": "DECISIONS.md",
       "out": "decisions.html",
       "nav": "The decisions",
-      "group": null
-    },
-    {
-      "src": "ADAPTING.md",
-      "out": "adapting.html",
-      "nav": "Adapting a brownfield",
-      "group": null
+      "group": "The stack"
     },
     {
       "src": "starter/README.md",
       "out": "starter.html",
       "nav": "The starter",
-      "group": null
+      "group": "The stack"
+    },
+    {
+      "src": "SHIPPED.md",
+      "out": "shipped.html",
+      "nav": "What ships",
+      "group": "The stack"
+    },
+    {
+      "src": "ADAPTING.md",
+      "out": "adapting.html",
+      "nav": "Adopting a repo you already run",
+      "group": "Getting on it"
+    },
+    {
+      "src": "CONTRIBUTING.md",
+      "out": "contributing.html",
+      "nav": "Contributing",
+      "group": "About"
+    },
+    {
+      "src": "SECURITY.md",
+      "out": "security.html",
+      "nav": "Security",
+      "group": "About"
     }
   ]
 }

@@ -7,7 +7,14 @@ This file is the *why*; the runnable truth is [`starter/`](starter/). Deviating 
 pick? Record a superseding ADR in your repo (ADR-004) - the paved road is a default,
 not a cage.
 
-## Summary - the paved road
+## The picks, by area
+
+Read the area you are arguing about. Each row names what the pick was chosen against;
+the sections below carry the reasoning, one per axis.
+
+### The ground floor
+
+Chosen once, and every other pick assumes them.
 
 | Axis | Pick | Escape hatch |
 |---|---|---|
@@ -15,18 +22,39 @@ not a cage.
 | Task runner | Turborepo | Nx at 10+ packages / enforced boundaries |
 | Lint + format | Biome (+ Prettier for SCSS only) | minimal ESLint for a plugin Biome lacks |
 | TypeScript | strict base + `noUncheckedIndexedAccess` + `noImplicitOverride` | leaf tsconfig per app |
-| Fastify DI | native plugins, no container | `@fastify/awilix` when the graph outgrows wiring |
-| Env config | Zod-validated schema at boot | - |
-| Next.js | App Router, standalone, typed config + security headers | - |
 | Supply chain | 7-day `minimumReleaseAge` + `allowBuilds` | scoped exclude for critical security bumps |
-| CI | least-privilege permissions + pnpm cache + frozen lockfile | another CI vendor / self-hosted runners, same shape |
-| Testing | Vitest + Playwright, tiered; Lighthouse as a local perf budget (committed baseline + history, no CI gate) | - |
-| Auth | Better Auth (product) / `openid-client` module (enterprise SSO) | - |
+
+### The application
+
+What the running thing is made of.
+
+| Axis | Pick | Escape hatch |
+|---|---|---|
+| Next.js | App Router, standalone, typed config + security headers | - |
+| Fastify DI | native plugins, no container | `@fastify/awilix` when the graph outgrows wiring |
 | Proxy | Next `proxy.ts` (Node runtime) + rewrites -> Fastify | - |
+| Auth | Better Auth (product) / `openid-client` module (enterprise SSO) | - |
 | Styling | CSS Modules + SCSS, DTCG three-tier tokens | Tailwind, superseded locally per ADR-004 |
-| Dependency updates | Renovate, pin-everything, 7-day cooldown, grouped minor/patch | Dependabot when the org already lives in it |
-| Logging | pino, JSON lines to stdout, redacted at the edge | structured console in edge/serverless contexts |
+| Env config | Zod-validated schema at boot | - |
 | Request validation | Zod at the Fastify boundary via type provider | `@fastify/type-provider-typebox` for OpenAPI needs |
+| Logging | pino, JSON lines to stdout, redacted at the edge | structured console in edge/serverless contexts |
+
+### Proving it works
+
+How a change is shown to be safe before it lands.
+
+| Axis | Pick | Escape hatch |
+|---|---|---|
+| Testing | Vitest + Playwright, tiered; Lighthouse as a local perf budget (committed baseline + history, no CI gate) | - |
+| CI | least-privilege permissions + pnpm cache + frozen lockfile | another CI vendor / self-hosted runners, same shape |
+| Dependency updates | Renovate, pin-everything, 7-day cooldown, grouped minor/patch | Dependabot when the org already lives in it |
+
+### Left to you, deliberately
+
+Decided per repository, because centrally there is no right answer.
+
+| Axis | Pick | Escape hatch |
+|---|---|---|
 | Datastore + query layer | per-repo ADR (Postgres default; Drizzle/Kysely/Prisma fork) | - |
 | Containers + deploy | container-ready shape ships; Dockerfile + target per-repo ADR | - |
 
