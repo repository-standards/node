@@ -1,7 +1,7 @@
 {
   "$about": "The stack contract and manifest in one (ADR-016 in the core repo): the same schema (files/guards, adapt classes, per-entry rule anchors - here DECISIONS#N instead of R#) the core's standard.manifest.json uses, so the align engine and self-verify read it whole. Paths are the adopted repo's; the reference copy of every merge-class file lives in starter/. An adopting repo carries this file beside standard.manifest.json; self-verify then counts one drift across both layers. The registry pointer is the linkage to the core - discovery metadata, never a version requirement (core ADR-022).",
   "technology": "node",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Node/TypeScript best practices - Next.js + Fastify through one proxy, Better Auth, tiered testing; distilled from production repos and boot-verified",
   "registry": "repository-standards/core",
   "files": [

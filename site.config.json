@@ -2,6 +2,7 @@
   "$about": "This repo's site in the ecosystem's shared form - rendered by the CORE's tools/docsite.mjs (one form, many sites, zero copied generators). This repository carries no generator: the core's pages workflow clones it and runs the generator with this directory as the working directory, so everything below is the whole of what a stack decides about its own site.",
   "$layout": "ADR-031 in the core: one domain, surface first. This stack takes the node prefix - site_root for the landing, base_path for the docs. Those two lines are the entire difference between being served at the root and being served under a prefix; nothing else in the generator is layout-aware.",
   "brand": "repository-standards / node",
+  "wordmark_suffix": "node",
   "site_url": "https://repositorystandards.com",
   "site_root": "/node/",
   "base_path": "/docs/node/",

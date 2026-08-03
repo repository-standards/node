@@ -40,13 +40,23 @@
   a:focus-visible,button:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
 
   /* header with the ecosystem switcher in the CENTER */
-  header{position:sticky;top:0;z-index:40;background:color-mix(in srgb, var(--ink) 90%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  .bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:64px;gap:16px}
   .tag{font-family:var(--mono);font-size:11px;color:var(--amber);
     border:1px solid color-mix(in srgb, var(--amber) 34%, transparent);border-radius:999px;
     padding:2px 8px;letter-spacing:.04em;margin-left:10px}
-  .brandline{display:flex;align-items:center;justify-self:start}
-  .brand{font-family:var(--mono);font-size:14px;color:var(--dim);text-decoration:none;justify-self:start}
+  /* The same lockup the docs wear, so crossing between them does not feel like leaving.
+     The stack's name sits beside the wordmark rather than inside it: a qualifier, not a
+     third brand. */
+  .brand{display:flex;align-items:center;gap:11px;text-decoration:none;white-space:nowrap}
+  .brand .mark{height:32px;width:auto;flex:none;display:block}
+  .brand .word{display:flex;flex-direction:column;line-height:1}
+  .brand .word b{font-weight:750;font-size:16.5px;letter-spacing:-.025em;color:var(--tx)}
+  .brand .word i{font-style:normal;font-weight:700;font-size:9.5px;letter-spacing:.34em;
+    text-transform:uppercase;margin-top:4px;
+    background:linear-gradient(96deg,var(--amber) 4%,var(--amber2) 40%,var(--focus) 96%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand .stack{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--amber);
+    align-self:flex-end;padding-bottom:1px;letter-spacing:-.01em}
+  .brand .stack::before{content:"/";opacity:.45;margin-right:6px;color:var(--mid)}
   .navr{justify-self:end;display:flex;gap:22px;font-size:14.5px}
   .navr a{text-decoration:none;color:var(--mid)}
   .navr a:hover{color:var(--tx)}
@@ -124,30 +134,175 @@
 </head>
 <body>
 
-<header>
-  <div class="wrap bar">
-    <span class="brandline">
-      <a class="brand" href="/docs/">repository-standards</a>
-      <span class="tag mono">v0.2.1</span>
-    </span>
-    <div class="switch" id="switch">
-      <button type="button" aria-haspopup="true" aria-expanded="false" id="swbtn">
-        Node Best Practices <span class="caret">&#9662;</span>
-      </button>
-      <div class="menu" role="menu" aria-label="Ecosystem">
-        <div class="grp">Core</div>
-        <a role="menuitem" href="https://github.com/repository-standards/core"><b>Repository Standards</b><span>the standard - one page of rules, align, verify, drift 0</span></a>
-        <hr>
-        <div class="grp">Best practices</div>
-        <a role="menuitem" href="/node/" aria-current="page"><b>Node</b><span>Next.js + Fastify - this site</span></a>
-      </div>
-    </div>
-    <nav class="navr" aria-label="Site">
-      <a href="/docs/node/index.html">Docs</a>
-      <a href="https://github.com/repository-standards/node">GitHub</a>
-    </nav>
-  </div>
-</header>
+<!--topbar:start-->
+<style>
+:root {
+  /* The header's own height, declared once. The sidebar sticks below it and sizes itself
+     against it; hard-coding the number in both places is how the column ends up scrolling
+     under the header with its first entries unreachable. */
+  --tb-h: 66px;
+  --tb-pad: 26px;
+  --bg: #08080b;
+  --bg-panel: #0c0c11;
+  --fg: #f4f2ee;
+  /* Body copy sits a step under the heading ink. Same hue, less glare - the difference
+     between a page you scan and one you can read for ten minutes. */
+  --fg-body: #cbc7d1;
+  --muted: #a7a3b2;
+  --border: rgba(255,255,255,.08);
+  --line: rgba(255,255,255,.08);
+  --line2: rgba(255,255,255,.05);
+  /* Channels as well as hex: the translucent borders and glows need the same hue, and a
+     site that themes the accent must not be left with the old one around its edges. */
+  --accent-rgb: 255,122,47;
+  --accent-2-rgb: 139,92,246;
+  --bg-rgb: 8,8,11;
+  --accent: #ff7a2f;
+  --accent-soft: #ff9a5c;
+  --accent-2: #a884ff;
+  --green: #34d399;
+  --link: #ff7a2f;
+  --link-visited: #ff9a5c;
+  --code-bg: rgba(255,255,255,.045);
+  /* Masked rather than drawn with borders, so the chevron keeps its shape while its box
+     stays big enough to click. Inline, because the site loads no external asset. */
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M3.2 1.4 L6.8 5 L3.2 8.6' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --active-bg: rgba(var(--accent-rgb), .09);
+  --active-fg: #ff7a2f;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, system-ui, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+:root{
+  --bg: #0A0F0D;
+  --bg-rgb: 10,15,13;
+  --bg-panel: #0C1310;
+  --fg: #EAF2ED;
+  --fg-body: #C3D0C8;
+  --muted: #9DAAA2;
+  --accent: #54D6AE;
+  --accent-rgb: 84,214,174;
+  --accent-soft: #37B893;
+  --accent-2: #8EE3C6;
+  --accent-2-rgb: 142,227,198;
+  --green: #54D6AE;
+  --link: #54D6AE;
+  --link-visited: #37B893;
+  --active-fg: #54D6AE;
+}
+
+
+.topbar{position:sticky;top:0;z-index:50;backdrop-filter:blur(16px) saturate(140%);
+  background:linear-gradient(180deg,rgba(var(--bg-rgb), .82),rgba(var(--bg-rgb), .42));
+  border-bottom:1px solid var(--line2)}
+.topbar-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:18px;
+  padding:0 var(--tb-pad);height:var(--tb-h);position:relative}
+.tb-brand{display:flex;align-items:center;gap:11px;white-space:nowrap;text-decoration:none}
+.tb-mark{height:32px;width:auto;flex:none;display:block}
+.tb-word{display:flex;flex-direction:column;line-height:1}
+.tb-word b{font-weight:750;font-size:16.5px;letter-spacing:-.025em;color:var(--fg)}
+.tb-word i{font-style:normal;font-weight:700;font-size:9.5px;letter-spacing:.34em;
+  text-transform:uppercase;margin-top:4px;
+  background:linear-gradient(96deg,var(--accent) 4%,var(--accent-soft) 34%,var(--accent-2) 96%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+/* The stack's name, set against the wordmark rather than inside it: same weight as the
+   line above it, in the accent, so it reads as a qualifier and not as a third brand. */
+.tb-stack{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--accent);
+  align-self:flex-end;padding-bottom:1px;letter-spacing:-.01em}
+.tb-stack::before{content:"/";opacity:.45;margin-right:6px;color:var(--muted)}
+.tb-tag{font-family:var(--font-mono);font-size:11px;color:var(--accent);
+  border:1px solid rgba(var(--accent-rgb), .34);border-radius:999px;padding:2px 8px;letter-spacing:.04em}
+.tb-spacer{flex:1}
+.tb-links{display:flex;gap:2px;align-items:center}
+.tb-links a{color:var(--muted);font-size:14.5px;font-weight:600;padding:8px 11px;
+  border-radius:9px;text-decoration:none;white-space:nowrap;transition:color .18s ease,background .18s ease}
+.tb-links a:hover,.tb-links a.tb-on{color:var(--fg);background:rgba(255,255,255,.05)}
+.tb-links a.tb-gh{display:inline-flex;align-items:center;gap:7px;color:var(--fg);
+  background:rgba(255,255,255,.045);border:1px solid var(--border);border-radius:11px;
+  padding:8px 12px;margin-left:6px;transition:border-color .18s ease,background .18s ease}
+.tb-links a.tb-gh:hover{border-color:rgba(var(--accent-rgb), .5);background:rgba(255,255,255,.07)}
+.tb-links a.tb-gh .gh-mark{flex:none}
+.tb-switch{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.tb-switch>button{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-sans);
+  font-size:14px;font-weight:650;color:var(--fg);background:rgba(255,255,255,.045);
+  border:1px solid var(--line);border-radius:11px;padding:9px 13px;cursor:pointer;
+  transition:border-color .18s ease,background .18s ease}
+.tb-switch>button:hover{border-color:rgba(var(--accent-rgb), .5)}
+.tb-switch .pip{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.tb-switch .chev{font-size:10px;opacity:.7;transition:transform .2s ease}
+.tb-switch[data-open] .chev{transform:rotate(180deg)}
+.tb-menu{position:absolute;top:calc(100% + 10px);left:50%;width:320px;text-align:left;
+  background:linear-gradient(180deg,#141319,#0e0d12);border:1px solid var(--line);
+  border-radius:16px;padding:10px;box-shadow:0 30px 70px rgba(0,0,0,.6);
+  opacity:0;transform:translateX(-50%) translateY(-8px) scale(.98);pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease}
+.tb-switch[data-open] .tb-menu{opacity:1;transform:translateX(-50%);pointer-events:auto}
+.tb-menu .grp{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);padding:10px 12px 6px}
+.tb-menu a{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;
+  color:var(--fg);font-size:14.5px;font-weight:600;text-decoration:none}
+.tb-menu a:hover{background:rgba(255,255,255,.06)}
+.tb-menu a small{display:block;color:var(--muted);font-weight:500;font-size:12px;margin-top:1px;line-height:1.35}
+.tb-menu a .now{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--green);
+  border:1px solid rgba(52,211,153,.35);border-radius:999px;padding:2px 8px}
+.tb-menu .div{height:1px;background:var(--line2);margin:6px 8px}
+@media(max-width:820px){
+  .tb-switch{position:static;transform:none;margin-left:auto}
+  .tb-menu{left:auto;right:0;transform:translateY(-8px) scale(.98)}
+  .tb-switch[data-open] .tb-menu{transform:none}
+  .tb-tag{display:none}
+}
+
+
+  .atmos{position:absolute;top:0;left:0;width:100%;height:960px;z-index:0;pointer-events:none;overflow:hidden}
+  .atmos .glow{position:absolute;border-radius:50%;filter:blur(20px)}
+  .atmos .g1{top:-260px;left:16%;width:1100px;height:900px;transform:translateX(-50%);
+    background:radial-gradient(circle at center, rgba(var(--accent-rgb), .16), transparent 62%);
+    animation:drift1 22s ease-in-out infinite alternate}
+  .atmos .g2{top:-200px;left:78%;width:1100px;height:900px;transform:translateX(-50%);
+    background:radial-gradient(circle at center, rgba(var(--accent-2-rgb), .15), transparent 62%);
+    animation:drift2 26s ease-in-out infinite alternate}
+  .atmos .g3{top:180px;left:50%;width:900px;height:700px;transform:translateX(-50%);
+    background:radial-gradient(circle at center, rgba(var(--accent-2-rgb), .08), transparent 60%);
+    animation:drift3 30s ease-in-out infinite alternate}
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.04;mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+  @keyframes drift1{from{transform:translate(-50%,0) scale(1)}to{transform:translate(-46%,3vh) scale(1.08)}}
+  @keyframes drift2{from{transform:translate(-42%,0) scale(1)}to{transform:translate(-48%,4vh) scale(1.12)}}
+  @keyframes drift3{from{transform:translate(-50%,0) scale(1)}to{transform:translate(-54%,-3vh) scale(1.1)}}
+  @media (prefers-reduced-motion: reduce){.atmos .glow{animation:none}}
+</style>
+<div class="atmos" aria-hidden="true">
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+<header class="topbar"><div class="topbar-in">
+
+<a class="tb-brand" href="/node/"><img class="tb-mark" src="/node/logo-mark.png" alt="" width="428" height="512"><span class="tb-word"><b>repository</b><i>Standards</i></span><span class="tb-stack">node</span></a>
+<span class="tb-tag">v0.2.2</span>
+<span class="tb-spacer"></span>
+<nav class="tb-links"><a href="/node/">Homepage</a><a class="tb-gh" href="https://github.com/repository-standards/node" target="_blank" rel="noopener noreferrer"><svg class="gh-mark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg>GitHub</a></nav>
+<div class="tb-switch" id="ecoswitch">
+<button type="button" aria-haspopup="true" aria-expanded="false" id="ecobtn"><span class="pip"></span> Repository Standards <span class="chev">&#9662;</span></button>
+<div class="tb-menu" role="menu" aria-label="Ecosystem">
+<div class="grp">Core</div>
+<a role="menuitem" href="/docs/"><span>Repository Standards<small>the method - align, verify, drift 0</small></span></a>
+<div class="div"></div>
+<div class="grp">Best practices</div>
+<a role="menuitem" href="/docs/node/"><span>Node<small>Next.js + Fastify - starter, decisions, adapting guide</small></span><span class="now">here</span></a>
+</div>
+</div>
+</div></header>
+<script>
+(function(){
+  var eco=document.getElementById("ecoswitch"),ecb=document.getElementById("ecobtn");
+  if(!eco||!ecb) return;
+  ecb.addEventListener("click",function(){var o=eco.hasAttribute("data-open");eco.toggleAttribute("data-open");ecb.setAttribute("aria-expanded",String(!o));});
+  document.addEventListener("click",function(e){if(!eco.contains(e.target)){eco.removeAttribute("data-open");ecb.setAttribute("aria-expanded","false");}});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"){eco.removeAttribute("data-open");ecb.setAttribute("aria-expanded","false");}});
+})();
+</script>
+<!--topbar:end-->
 
 <main>
   <section class="hero">
