@@ -5,4 +5,8 @@
 import { auth } from "@starter/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 
-export const { GET, POST } = toNextJsHandler(auth.handler);
+// Built per request, not at module scope: reaching for auth.handler while this file is
+// merely being imported is the build-time database open the auth package now avoids, and
+// doing it here would put it straight back.
+export const GET = (request: Request) => toNextJsHandler(auth.handler).GET(request);
+export const POST = (request: Request) => toNextJsHandler(auth.handler).POST(request);

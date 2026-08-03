@@ -16,36 +16,56 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { betterAuth } from "better-auth";
 
-// Every workspace package sits two levels below the repo root, so the default resolves
-// to <repo root>/data/starter.db no matter which app opened it. Override with
-// AUTH_DB_PATH when running from anywhere else (or in a container).
-const dbFile = process.env.AUTH_DB_PATH ?? path.resolve(process.cwd(), "../../data/starter.db");
-mkdirSync(path.dirname(dbFile), { recursive: true });
+// Opened on FIRST USE, not on import. A module that opens a database as a side effect
+// opens it for anyone who so much as imports it - a test, a script, and in particular a
+// production build, where Next imports every route to collect its metadata and turbo runs
+// two package builds at once. That is how two processes ended up racing to switch the same
+// file to WAL, and no pragma ordering fixes a database that should never have been opened.
+// Taken from open() rather than from betterAuth: the factory's own return type is the
+// generic one, and the instance is the concrete configuration - assignable in neither
+// direction, which is TypeScript being right about them not being the same thing.
+type AuthInstance = ReturnType<typeof open>;
+let instance: AuthInstance | undefined;
 
-const database = new DatabaseSync(dbFile);
-// The web app and the API service open this file concurrently - including during a build,
-// where turbo runs both package builds at once and Next collects page data for the auth
-// route. Order matters and is the whole point: switching a database to WAL takes an
-// exclusive lock, so busy_timeout has to be in force BEFORE that statement runs or it is
-// the one call with nothing to wait on. Set the other way round this raced roughly one
-// build in three: "database is locked", from the pragma meant to prevent exactly that.
-database.exec("PRAGMA busy_timeout = 5000;");
-database.exec("PRAGMA journal_mode = WAL;");
+function open() {
+  // Every workspace package sits two levels below the repo root, so the default resolves
+  // to <repo root>/data/starter.db no matter which app opened it. Override with
+  // AUTH_DB_PATH when running from anywhere else (or in a container).
+  const dbFile = process.env.AUTH_DB_PATH ?? path.resolve(process.cwd(), "../../data/starter.db");
+  mkdirSync(path.dirname(dbFile), { recursive: true });
 
-export const auth = betterAuth({
-  appName: "starter",
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-  // Dev-only fallback so the starter boots with zero setup. Set BETTER_AUTH_SECRET in
-  // every deployed environment - session cookies are signed with it.
-  secret: process.env.BETTER_AUTH_SECRET ?? "starter-dev-only-secret-do-not-deploy-me",
-  trustedOrigins: ["http://localhost:3000", "http://127.0.0.1:3000"],
-  database,
-  emailAndPassword: {
-    enabled: true,
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // absolute cap: 7 days
-    updateAge: 60 * 60 * 24, // silent server-side refresh once a day of activity
+  const database = new DatabaseSync(dbFile);
+  // The web app and the API service open this file concurrently, so both pragmas matter -
+  // and the ORDER matters: switching to WAL takes an exclusive lock, so busy_timeout has to
+  // already be in force or that one statement is the one with nothing to wait on.
+  database.exec("PRAGMA busy_timeout = 5000;");
+  database.exec("PRAGMA journal_mode = WAL;");
+
+  return betterAuth({
+    appName: "starter",
+    baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+    // Dev-only fallback so the starter boots with zero setup. Set BETTER_AUTH_SECRET in
+    // every deployed environment - session cookies are signed with it.
+    secret: process.env.BETTER_AUTH_SECRET ?? "starter-dev-only-secret-do-not-deploy-me",
+    trustedOrigins: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    database,
+    emailAndPassword: {
+      enabled: true,
+    },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // absolute cap: 7 days
+      updateAge: 60 * 60 * 24, // silent server-side refresh once a day of activity
+    },
+  });
+}
+
+// Reads like the instance it stands in for, so nothing downstream changes shape.
+export const auth = new Proxy({} as AuthInstance, {
+  get(_target, prop) {
+    // Bound through the instance, not the proxy: a getter reaching for `this` must find
+    // the real object, or it reads properties off an empty target.
+    if (!instance) instance = open();
+    return Reflect.get(instance, prop, instance);
   },
 });
 

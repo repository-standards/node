@@ -8,6 +8,9 @@ import { redirect } from "next/navigation";
 import styles from "./page.module.scss";
 import { SignOutButton } from "./sign-out-button";
 
+// Reads the session, so there is no static version of it to build.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in?next=/dashboard");
