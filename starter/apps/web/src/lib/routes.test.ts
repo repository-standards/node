@@ -13,6 +13,7 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/auth/get-session")).toBe(true);
     expect(isPublicPath("/api/health")).toBe(true);
     expect(isPublicPath("/api/ready")).toBe(true);
+    expect(isPublicPath("/api/vitals")).toBe(true);
   });
 
   it("denies everything else by default", () => {

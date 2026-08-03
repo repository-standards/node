@@ -20,7 +20,7 @@ not a cage.
 | Next.js | App Router, standalone, typed config + security headers | - |
 | Supply chain | 7-day `minimumReleaseAge` + `allowBuilds` | scoped exclude for critical security bumps |
 | CI | least-privilege permissions + pnpm cache + frozen lockfile | another CI vendor / self-hosted runners, same shape |
-| Testing | Vitest + Playwright + Lighthouse CI, tiered, root-orchestrated | - |
+| Testing | Vitest + Playwright, tiered; Lighthouse as a local perf budget (committed baseline + history, no CI gate) | - |
 | Auth | Better Auth (product) / `openid-client` module (enterprise SSO) | - |
 | Proxy | Next `proxy.ts` (Node runtime) + rewrites -> Fastify | - |
 | Styling | CSS Modules + SCSS, DTCG three-tier tokens | Tailwind, superseded locally per ADR-004 |
@@ -100,11 +100,11 @@ explicit `allowBuilds` allow-list and `enablePrePostScripts: false`. pnpm 11 shi
 ~2.5h) sat inside that window, so the paved road is more conservative. Critical
 security bumps use a scoped exclude, never a global lower.
 
-## 9. Testing - Vitest + Playwright + Lighthouse CI, tiered
+## 9. Testing - Vitest + Playwright, tiered; Lighthouse as a local perf budget
 
-**Pick:** Vitest (unit + integration) + Playwright (e2e) + Lighthouse CI (advisory
-perf/a11y budgets), orchestrated from the repo root so the commands are discoverable
-and Turbo-cacheable. The tiers: unit proves one module's logic (no I/O, milliseconds);
+**Pick:** Vitest (unit + integration) + Playwright (e2e) + Lighthouse (advisory perf
+budgets), orchestrated from the repo root so the commands are discoverable and
+Turbo-cacheable. The tiers: unit proves one module's logic (no I/O, milliseconds);
 integration proves the contract with a real backing service via an ephemeral Docker
 test-stack (`docker-compose.test.yml`, non-default ports, tmpfs, healthchecks - never a
 shared dev DB); e2e proves a user journey through the booted app. Unit and integration
@@ -112,10 +112,74 @@ tests are co-located (`*.test.ts` / `*.integration.test.ts`, split by Vitest pro
 journeys live in a top-level `e2e/` workspace package because they cross app
 boundaries. Money / security / external-contract paths are non-negotiable at the
 integration tier and above (mirrors the
-[testing-strategy checklist entry](https://github.com/bodurkalukasz/repository-standards/blob/main/docs/method/checklist.md)).
+[testing-strategy checklist entry](https://github.com/repository-standards/core/blob/main/docs/method/checklist.md)).
 Maintenance rules: coverage is a floor on paths that matter, not a vanity percentage;
 flaky tests are quarantined with an owner, never retried-forever; a test changes in the
 same PR as its spec; if the unit suite needs Docker, it is mis-tiered.
+
+**Pick (perf):** Lighthouse driven by a small in-repo runner (`perf/`, the `lighthouse`
+package on headless Chrome), **not** Lighthouse CI and **not** `temporary-public-storage`.
+Rationale: LHCI's easy upload target is a public bucket that auto-expires after a few
+days - the opposite of what a perf record is for. This runner is a **local, report-only
+pre-push tool** (never a CI gate, never fails a push): it diffs the run against a
+committed baseline and prints per-route deltas; moving the baseline is a deliberate,
+reviewed commit. Retention is the point: the rolling `baseline*.json` and an append-only
+dated `history/` are **committed** (kept, especially for deployed targets), while the
+live `.results/` is gitignored (local runs are not retained); nothing is uploaded
+anywhere and nothing expires. Measurement is standard and generic (it points Lighthouse
+at an origin); preparing a measurable environment - build, start, and seed only if the app
+needs data - is the per-repo **adapt** seam (`scripts/perf-budget.sh`, overridable command
+hooks; seeding is off by default - but if the app's numbers depend on data, pin a
+**defined state** (seed a containerised DB via `docker-compose.test.yml` /
+`bootstrap:test-stack`, or a fixed dataset) so a run is repeatable). Targets: `local` is
+the only one built and served for you; **any other name** (`dev`, `qa`, `perf`, `staging`,
+`prod`, ...) is a **deployed** target, measured at its real URL with no seed/build/start,
+each with its own `baseline.<target>.json` + history. Routes stay read-only so measuring a
+deployed target never creates real traffic or data.
+
+Methodology - what a number is worth depends on where it came from. **Local numbers are
+machine-specific**: even a repeatable app state still runs on each developer's own CPU, so
+local results are a **relative pre-push check** ("did my work regress against my own
+pre-work baseline?"), not a cross-team trend. The **comparable, trackable signal is a fixed
+deployed environment** (dev/qa/perf/prod) - stable hardware, so its committed history is a
+real trend. Both baseline and history are committed for every target (a single maintainer
+on one machine gets value from local history too); whether a team commits *local* history
+is their call, made with the machine-variance caveat in mind. For continuous prod health,
+prefer RUM over synthetic runs against the live site (see the RUM pick below).
+
+**Pick (RUM):** The synthetic budget above answers "did my change slow things down?" on one
+controlled machine; it cannot answer "how slow is it for real users?" - that is Real User
+Monitoring, and the two are complements. The **method is fixed, the vendor is not**: measure
+with the **`web-vitals` library** (the primitive everyone - Sentry, Grafana Faro, Vercel, GA
+- wraps, because only it matches how Chrome reports to CrUX), report **p75/p95** segmented by
+device and route (the mean buries the tail that is the real experience), and validate the
+SEO-facing number against **CrUX** (the 28-day field dataset that actually feeds ranking).
+Sentry is **not** a Web-Vitals platform - it is an error tool with an APM bolted on - so we
+do not anoint it; we standardise the primitive and treat the reporting **sink as a thin,
+swappable adapter** (one `sink(metric)` function).
+
+The starter ships the neutral half: `web-vitals` (attribution build) in
+`instrumentation-client.ts` -> a one-function `reportWebVital` sink -> an `/api/vitals`
+beacon stub you point at your store. It runs with no vendor account. Recommended sink when
+you have it: **Sentry** - a team already running it for errors adds RUM with the browser SDK
+at near-zero new ops (its browserTracing auto-captures the same vitals). Env-gate it by
+`NEXT_PUBLIC_SENTRY_DSN` (no-op locally and in CI), keep `sendDefaultPii: false`, and
+**Session Replay off by default** (DOM/PII). The cost caveat that decides when to swap: in
+Sentry, Web Vitals ride on **spans**, billed per-span since Aug 2025 (the free span quota was
+halved to 5M) with no metrics-only path - so hold `tracesSampleRate` ~0.1, and when cost or
+scale bites, swap the sink to **Grafana Faro self-hosted** or keep the **DIY beacon ->
+Prometheus/Loki** (both ~$0 into an existing Grafana stack, more ops) or **Vercel Speed
+Insights** (if on Vercel). Close the loop with an **alert on a Web-Vitals budget** (e.g. p75
+LCP over target on a key route) so a regression pages someone instead of living on an
+unwatched dashboard.
+
+Fixing what RUM finds is **not** a checklist we freeze here - it would go stale and never fit
+every app. Use the **attribution build** (`web-vitals/attribution`) to locate the actual
+cause - the LCP element, the INP interaction/handler, the shifting node - then apply the
+current canonical technique from **web.dev** (Optimize LCP / INP / CLS). Diagnose, then fix
+against living guidance; don't ship a static optimisation plan. Division of labour: synthetic
+catches regressions **before merge**, RUM measures what real devices and networks **actually
+experience** - run both.
 
 ## 10. App shell - auth, proxy, styling
 

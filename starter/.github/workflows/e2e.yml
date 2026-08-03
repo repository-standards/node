@@ -1,8 +1,10 @@
-# E2E (Playwright) + integration + advisory Lighthouse. A TEMPLATE for an adopting repo
-# (this file does not run in the standard's own repo). Separate from ci.yml's fast
-# quality gate: this tier is slower (boots the Docker test-stack and the app), so it runs
-# on its own and is the one you gate a release on. Hardened per DECISIONS.md #11 (explicit
-# least-privilege permissions, pnpm cache, frozen lockfile); actions are pinned by full commit SHA (DECISIONS.md #11).
+# E2E (Playwright) + integration tiers. A TEMPLATE for an adopting repo (this file
+# does not run in the standard's own repo). Separate from ci.yml's fast quality gate:
+# this tier is slower (boots the Docker test-stack and the app), so it runs on its own
+# and is the one you gate a release on. Hardened per DECISIONS.md #8 (explicit
+# least-privilege permissions, pnpm cache, frozen lockfile); pin third-party actions by SHA.
+# Perf budgets are NOT here: Lighthouse is a local, report-only tool (DECISIONS.md #9),
+# run before pushing via `pnpm test:perf`, not a CI gate.
 
 name: e2e
 
@@ -50,13 +52,6 @@ jobs:
 
       - name: E2E (Playwright)
         run: pnpm test:e2e
-
-      # Advisory by default - reports, does not block (lighthouserc.json).
-      - name: Lighthouse budgets (advisory)
-        # continue-on-error keeps the budget advisory WITHOUT swallowing a broken
-        # invocation - a missing script or crashed run still shows red on the step.
-        continue-on-error: true
-        run: pnpm test:perf
 
       - name: Tear down the test-stack
         if: always()

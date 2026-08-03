@@ -2,7 +2,7 @@
   "$about": "The stack contract and manifest in one (ADR-016 in the core repo): the same schema (files/guards, adapt classes, per-entry rule anchors - here DECISIONS#N instead of R#) the core's standard.manifest.json uses, so the align engine and self-verify read it whole. Paths are the adopted repo's; the reference copy of every merge-class file lives in starter/. An adopting repo carries this file beside standard.manifest.json; self-verify then counts one drift across both layers. The registry pointer is the linkage to the core - discovery metadata, never a version requirement (core ADR-022).",
   "technology": "node",
   "description": "Node/TypeScript best practices - Next.js + Fastify through one proxy, Better Auth, tiered testing; distilled from production repos and boot-verified",
-  "registry": "bodurkalukasz/repository-standards",
+  "registry": "repository-standards/core",
   "files": [
     { "path": ".nvmrc", "purpose": "the Node version pin - one runtime, no drift between machines", "adapt": "copy", "required": true, "profile": "core", "rule": "DECISIONS#1" },
     { "path": "biome.json", "purpose": "lint + format, one tool - the reference copy encodes the strictness the picks assume", "adapt": "merge", "required": true, "profile": "core", "rule": "DECISIONS#3" },
@@ -11,7 +11,8 @@
     { "path": "vitest.config.ts", "purpose": "unit and integration tiers as separate Vitest projects", "adapt": "merge", "required": true, "profile": "core", "rule": "DECISIONS#9" },
     { "path": "playwright.config.ts", "purpose": "the e2e tier - real browser journeys against the running app", "adapt": "merge", "required": false, "profile": "core", "rule": "DECISIONS#9" },
     { "path": "docker-compose.test.yml", "purpose": "ephemeral real dependencies for integration/e2e - not mocks", "adapt": "copy", "required": false, "profile": "core", "rule": "DECISIONS#9" },
-    { "path": "lighthouserc.json", "purpose": "advisory perf/a11y budget", "adapt": "copy", "required": false, "profile": "scale", "rule": "DECISIONS#9" },
+    { "path": "perf/", "purpose": "local Lighthouse perf-budget runner - report-only, committed baseline + dated history, no external upload; edit config.mjs routes", "adapt": "copy", "required": false, "profile": "scale", "rule": "DECISIONS#9" },
+    { "path": "scripts/perf-budget.sh", "purpose": "local perf env prep (seed/build/start) - copy, then adapt its SEED/BUILD/START hooks to your stack", "adapt": "copy", "required": false, "profile": "scale", "rule": "DECISIONS#9" },
     { "path": "renovate.json", "purpose": "dependency updates as reviewed diffs, riding the same 7-day cooldown", "adapt": "merge", "required": false, "profile": "core", "rule": "DECISIONS#12" },
     { "path": ".github/workflows/ci.yml", "purpose": "hardened least-privilege CI template", "adapt": "merge", "required": false, "profile": "scale", "rule": "DECISIONS#11" },
     { "path": ".github/workflows/e2e.yml", "purpose": "the e2e tier in CI, against the docker test stack", "adapt": "merge", "required": false, "profile": "scale", "rule": "DECISIONS#11" }

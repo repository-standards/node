@@ -2,7 +2,14 @@
 // DECISIONS.md #10). Kept as a pure module so the policy is unit-testable without
 // booting Next.
 
-const PUBLIC_PATHS = new Set(["/", "/sign-in", "/sign-up", "/api/health", "/api/ready"]);
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/sign-in",
+  "/sign-up",
+  "/api/health",
+  "/api/ready",
+  "/api/vitals", // RUM Web Vitals beacon - fires for logged-out visitors too
+]);
 
 const PUBLIC_PREFIXES = [
   "/api/auth/", // Better Auth's own endpoints (sign-in/up/out, session) must stay open

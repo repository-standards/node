@@ -5,11 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Node Best Practices - Repository Standards</title>
 <meta name="description" content="The Node stack, already decided. A production-ready Next.js + Fastify starter, every choice argued, proven weekly by CI.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Repository Standards">
+<meta property="og:title" content="Node Best Practices - the stack, already decided">
+<meta property="og:description" content="A production-ready Next.js + Fastify starter, every choice argued and recorded, proven by a CI run that boots it.">
+<meta property="og:url" content="https://repositorystandards.com/node/">
+<meta property="og:image" content="https://repositorystandards.com/node/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Repository Standards node - Next.js, Fastify, drift 0">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root{
     --mono: ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --ink:#0D0E11; --ink2:#101216; --surface:#16181D; --surface2:#1b1e24;
+    --ink:#08080b; --ink2:#101216; --surface:#16181D; --surface2:#1b1e24;
     --line:#242832; --line2:#31363f;
     --tx:#ECEDEF; --mid:#9BA1AB; --dim:#5D636E;
     --amber:#FFB454; --amber2:#e79b3e;
@@ -102,14 +112,14 @@
 
 <header>
   <div class="wrap bar">
-    <a class="brand" href="https://github.com/bodurkalukasz/repository-standards">repository-standards</a>
+    <a class="brand" href="https://github.com/repository-standards/core">repository-standards</a>
     <div class="switch" id="switch">
       <button type="button" aria-haspopup="true" aria-expanded="false" id="swbtn">
         Node Best Practices <span class="caret">&#9662;</span>
       </button>
       <div class="menu" role="menu" aria-label="Ecosystem">
         <div class="grp">Core</div>
-        <a role="menuitem" href="https://github.com/bodurkalukasz/repository-standards"><b>Repository Standards</b><span>the standard - one page of rules, align, verify, drift 0</span></a>
+        <a role="menuitem" href="https://github.com/repository-standards/core"><b>Repository Standards</b><span>the standard - one page of rules, align, verify, drift 0</span></a>
         <hr>
         <div class="grp">Best practices</div>
         <a role="menuitem" href="index.html" aria-current="page"><b>Node</b><span>Next.js + Fastify - this site</span></a>
@@ -117,7 +127,7 @@
     </div>
     <nav class="navr" aria-label="Site">
       <a href="docs/index.html">Docs</a>
-      <a href="https://github.com/bodurkalukasz/repository-standards-node">GitHub</a>
+      <a href="https://github.com/repository-standards/node">GitHub</a>
     </nav>
   </div>
 </header>
@@ -139,7 +149,7 @@
       </div>
       <div class="cmd">
         <span class="p">$</span>
-        <code id="cmd">npx degit bodurkalukasz/repository-standards-node/starter my-app</code>
+        <code id="cmd">npx degit repository-standards/node/starter my-app</code>
         <button type="button" id="copy" aria-label="Copy the command">copy</button>
       </div>
       <p class="meta">linked to the living standard &nbsp;/&nbsp; <b>boot-verified weekly</b> &nbsp;/&nbsp; MIT</p>
@@ -151,7 +161,7 @@
       <h2 id="what-h" class="sech">What is this?</h2>
       <p class="secp">
         <b>Node Best Practices</b> is the technology package of
-        <a href="https://github.com/bodurkalukasz/repository-standards">Repository Standards</a>:
+        <a href="https://github.com/repository-standards/core">Repository Standards</a>:
         a maintained set of choices for building web applications on Node -
         with a working application to start from, and guides for bringing
         projects you already run on board. Four things, concretely:
@@ -175,7 +185,7 @@
         <div class="g4">
           <h3>Automatic verification</h3>
           <p>A contract file your tooling reads. One check tells you - and your CI - that the project still follows the standard. No opinions, a number.</p>
-          <a href="https://github.com/bodurkalukasz/repository-standards-node/blob/main/stack.manifest.json">View the contract</a>
+          <a href="https://github.com/repository-standards/node/blob/main/stack.manifest.json">View the contract</a>
         </div>
       </div>
 
@@ -191,7 +201,7 @@
             one check that both still hold.
           </p>
         </div>
-        <a class="btn ghost" href="https://github.com/bodurkalukasz/repository-standards">Learn the standard</a>
+        <a class="btn ghost" href="https://github.com/repository-standards/core">Learn the standard</a>
       </div>
     </div>
   </section>
@@ -216,8 +226,8 @@
 
 <footer>
   <div class="wrap">
-    <span>Part of <a href="https://github.com/bodurkalukasz/repository-standards">Repository Standards</a> - the standard is the engine, this pack is the Node map.</span>
-    <span><a href="docs/index.html">Docs</a> &nbsp; <a href="docs/adapting.html">Brownfield guide</a> &nbsp; <a href="https://github.com/bodurkalukasz/repository-standards-node">GitHub</a></span>
+    <span>Part of <a href="https://github.com/repository-standards/core">Repository Standards</a> - the standard is the engine, this pack is the Node map.</span>
+    <span><a href="docs/index.html">Docs</a> &nbsp; <a href="docs/adapting.html">Brownfield guide</a> &nbsp; <a href="https://github.com/repository-standards/node">GitHub</a></span>
   </div>
 </footer>
 

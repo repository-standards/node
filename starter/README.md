@@ -24,6 +24,7 @@ Open <http://localhost:3000>, create an account, land on the protected dashboard
 | Default-deny at **both** gates - the proxy redirects, the service 401s; new routes are protected until allow-listed | `apps/web/src/lib/routes.ts`, `services/api/src/middleware/session-gate.ts` | DECISIONS #10 |
 | CSS Modules + SCSS, three-tier tokens (primitive -> semantic -> component) | `apps/web/src/app/globals.scss` + `*.module.scss` | DECISIONS #10, #3 |
 | Vitest unit tests co-located, Playwright e2e in `e2e/`, both run from the root | `pnpm test:unit`, `pnpm test:e2e` | DECISIONS #9 |
+| Lighthouse perf budgets - local, report-only, committed baseline + history (no CI gate, no external upload) | `pnpm test:perf`, `perf/` | DECISIONS #9 |
 | pnpm + Turborepo + Biome (+ Prettier for SCSS), 7-day supply-chain cooldown | root configs | DECISIONS #1-3, #8, #11 |
 
 ### How a request flows
@@ -47,6 +48,8 @@ pnpm build          # turbo build (next build + service typecheck)
 pnpm test:unit      # Vitest, co-located *.test.ts
 pnpm test:e2e       # Playwright journeys (boots the dev servers itself)
                     #   first time: pnpm --filter e2e exec playwright install chromium
+pnpm test:perf      # Lighthouse perf budget (local, report-only) vs committed baseline
+                    #   dev/prod: PERF_TARGET=prod PERF_WEBAPP_URL=https://... pnpm test:perf:remote
 pnpm check:all      # format + types + lint, turbo-cached
 pnpm lint           # biome check .
 ```
@@ -69,6 +72,7 @@ apps/web              Next.js app (proxy gate, auth pages, dashboard, rewrites)
 services/api          Fastify service (Zod env, session gate, /api/health, /api/me)
 packages/auth         the shared Better Auth instance + db:init migration script
 e2e                   Playwright journeys (config at the root)
+perf                  local Lighthouse perf-budget runner (baseline + history committed)
 data/                 local SQLite (created on first boot, gitignored)
 ```
 

@@ -1,12 +1,12 @@
 # repository-standards-node
 
 > Part of the repository-standards ecosystem:
-> [the standard](https://github.com/bodurkalukasz/repository-standards) is the
+> [the standard](https://github.com/repository-standards/core) is the
 > engine, this repo is the Node map pack. How it fits:
-> [docs/ecosystem.md](https://github.com/bodurkalukasz/repository-standards/blob/main/docs/ecosystem.md).
+> [docs/ecosystem.md](https://github.com/repository-standards/core/blob/main/docs/ecosystem.md).
 
 Technology best practices for Node/TypeScript, riding on
-[repository-standards](https://github.com/bodurkalukasz/repository-standards) -
+[repository-standards](https://github.com/repository-standards/core) -
 the stack layer (Layer 2) of the standard, split out so technology picks can move
 at technology speed while the methodology stays still.
 
@@ -29,7 +29,7 @@ to this stack the way it is walked to the core: entry by entry, waves, one drift
 ## Greenfield
 
 ```
-npx degit bodurkalukasz/repository-standards-node/starter my-app
+npx degit repository-standards/node/starter my-app
 cd my-app && pnpm install && pnpm dev
 ```
 
