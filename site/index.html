@@ -37,6 +37,9 @@
   /* header with the ecosystem switcher in the CENTER */
   header{position:sticky;top:0;z-index:40;background:rgba(13,14,17,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
   .bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:64px;gap:16px}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--orange,#ff7a2f);
+    border:1px solid rgba(255,122,47,.34);border-radius:999px;padding:2px 8px;
+    letter-spacing:.04em;margin-left:10px}
   .brand{font-family:var(--mono);font-size:14px;color:var(--dim);text-decoration:none;justify-self:start}
   .navr{justify-self:end;display:flex;gap:22px;font-size:14.5px}
   .navr a{text-decoration:none;color:var(--mid)}
@@ -112,7 +115,8 @@
 
 <header>
   <div class="wrap bar">
-    <a class="brand" href="https://github.com/repository-standards/core">repository-standards</a>
+    <a class="brand" href="/docs/">repository-standards</a>
+    <span class="tag mono">v0.1.0</span>
     <div class="switch" id="switch">
       <button type="button" aria-haspopup="true" aria-expanded="false" id="swbtn">
         Node Best Practices <span class="caret">&#9662;</span>

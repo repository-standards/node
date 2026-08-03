@@ -18,10 +18,10 @@ Open <http://localhost:3000>, create an account, land on the protected dashboard
 | Piece | Where | The decision behind it |
 |---|---|---|
 | Next.js 16 App Router, React 19, typed `next.config.ts` with security headers, `output: "standalone"` | `apps/web` | DECISIONS #7 |
-| Fastify 5, native plugin DI (no container), Zod-validated env at boot | `services/api` | DECISIONS #5, #6 |
+| Fastify 5, native plugin DI (no container), Zod-validated env at boot | `apps/api` | DECISIONS #5, #6 |
 | Better Auth - email + password, DB-backed **revocable** sessions | `packages/auth` | DECISIONS #10 |
 | Next 16 `proxy.ts` session gate (Node runtime, queries the session DB) + `/api/*` rewrites to Fastify | `apps/web/src/proxy.ts`, `next.config.ts` | DECISIONS #10 |
-| Default-deny at **both** gates - the proxy redirects, the service 401s; new routes are protected until allow-listed | `apps/web/src/lib/routes.ts`, `services/api/src/middleware/session-gate.ts` | DECISIONS #10 |
+| Default-deny at **both** gates - the proxy redirects, the service 401s; new routes are protected until allow-listed | `apps/web/src/lib/routes.ts`, `apps/api/src/middleware/session-gate.ts` | DECISIONS #10 |
 | CSS Modules + SCSS, three-tier tokens (primitive -> semantic -> component) | `apps/web/src/app/globals.scss` + `*.module.scss` | DECISIONS #10, #3 |
 | Vitest unit tests co-located, Playwright e2e in `e2e/`, both run from the root | `pnpm test:unit`, `pnpm test:e2e` | DECISIONS #9 |
 | Lighthouse perf budgets - local, report-only, committed baseline + history (no CI gate, no external upload) | `pnpm test:perf`, `perf/` | DECISIONS #9 |
@@ -69,7 +69,7 @@ build step. That is a bootstrapping choice, not the production shape:
 
 ```
 apps/web              Next.js app (proxy gate, auth pages, dashboard, rewrites)
-services/api          Fastify service (Zod env, session gate, /api/health, /api/me)
+apps/api           Fastify service (Zod env, session gate, /api/health, /api/me)
 packages/auth         the shared Better Auth instance + db:init migration script
 e2e                   Playwright journeys (config at the root)
 perf                  local Lighthouse perf-budget runner (baseline + history committed)

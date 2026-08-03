@@ -3,8 +3,7 @@
 # the point - the workspace globs are the trivial part.
 
 packages:
-  - 'apps/*'
-  - 'services/*'
+  - 'apps/*' # every deployable, UI or not - one place, see DECISIONS #17
   - 'packages/*'
   - 'e2e' # cross-app end-to-end journeys (Playwright) - its own package, not co-located
   - 'perf' # local Lighthouse perf-budget runner - report-only, committed baselines + history

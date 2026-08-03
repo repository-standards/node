@@ -293,6 +293,33 @@ starter refusing to fake one keeps the boot honest.
 
 **Escape hatch:** none needed - this axis IS the escape hatch, recorded.
 
+## 17. Monorepo layout - `apps/` for everything deployed, `packages/` for everything else
+
+**Pick:** two top-level workspace roots. `apps/*` holds every deployable - the Next
+application and the Fastify service sit side by side, UI or not. `packages/*` holds code
+that is never deployed on its own. Plus two single-purpose roots that are not libraries and
+not deployables: `e2e/` for journeys that cross applications, `perf/` for the local budget
+runner.
+
+**Why not `services/` beside `apps/`:** the split reads as "has a UI" versus "does not",
+and that line breaks the first time somebody adds a backend-for-frontend, an admin panel or
+a worker with a status page. It also implies the two are deployed differently, which the
+starter does not do - both are plain node processes, both log to stdout, both take env-only
+config. A third top-level concept earns its place when a team genuinely treats backends
+differently: separate on-call, separate release train, separate ownership. Until that is
+true, it is a folder that has to be explained.
+
+**Why not `libs/`:** it pairs neatly with `apps/`, and there is a real argument for it -
+in a pnpm workspace every member is a package, apps included, so `packages/` names a subset
+using the word for the whole. That is a naming purity worth less than meeting the
+expectation of everyone arriving from this ecosystem, where `packages/` is what Turborepo
+and pnpm examples use. `libs/` is the Nx convention; a repo already living in Nx should keep
+it and record the deviation.
+
+**Escape hatch:** rename either root. Nothing in the tooling depends on the names - the
+globs are two lines in `pnpm-workspace.yaml` - so the cost of deviating is a decision
+record, not a migration.
+
 ## Open questions - decided, provisionally
 
 The stack owns its own doubts (the core's open-questions catalog explains the
