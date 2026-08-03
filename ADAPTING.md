@@ -1,9 +1,36 @@
 # Adapting a brownfield repo to this stack
 
-Per-entry migration notes the core's stack-adaptation phase reads. Each note
-answers one question: the target repo already has something in this spot - how
-do we get from theirs to ours without breaking their build? The why behind
-every pick is in [DECISIONS.md](DECISIONS.md); this file is only the how.
+## Start it
+
+You do not walk this table yourself. Say it to your coding agent:
+
+```
+> take this repo onto repositorystandards.com with the node stack
+```
+
+It measures the repository first - what is here, what technology, how much you want done -
+and comes back with a plan naming who has to act on each item. Nothing is touched before
+you have seen it.
+
+Want the plan without the work?
+
+```
+> score this repo against repositorystandards.com with the node stack - count the work, do not do it
+```
+
+## What the agent is reading
+
+This table. Each note answers one question: the repository already has something in this
+spot - how do we get from theirs to ours without breaking the build? The reasoning behind
+every pick is in [the decisions](DECISIONS.md); this file is only the how, per entry, and
+it is here for you as much as for the agent - a plan you cannot check is a plan you have to
+take on trust.
+
+Two things worth knowing before you read it. **Nothing here is all-or-nothing**: an entry
+that does not fit gets an exception recorded rather than forced, and the drift number counts
+what you took, not what you skipped. And the order matters more than the speed - every note
+is written as a move that leaves the build green, because a migration that goes red in the
+middle is a migration that gets reverted.
 
 | Entry | The repo probably has | The move |
 |---|---|---|

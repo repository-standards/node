@@ -25,8 +25,6 @@
     "--active-fg": "#54D6AE"
   },
   "repo_url": "https://github.com/repository-standards/node",
-  "core_docs_url": "/docs/",
-  "node_docs_url": "/docs/node/",
   "out_dir": "site/docs",
   "sidebar_links": [
     {
@@ -42,7 +40,7 @@
       "group": null
     },
     {
-      "src": "README.md",
+      "src": "WHAT-THIS-IS.md",
       "out": "what-this-is.html",
       "nav": "What this is",
       "group": null
@@ -83,5 +81,7 @@
       "nav": "Security",
       "group": "About"
     }
-  ]
+  ],
+  "core_url": "/",
+  "node_url": "/node/"
 }

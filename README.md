@@ -1,21 +1,48 @@
-# repository-standards-node
+<div align="center">
 
-> Part of the repository-standards ecosystem:
-> [the standard](https://github.com/repository-standards/core) is the
-> engine, this repo is the Node map pack. How it fits:
-> [how it fits together](https://repositorystandards.com/docs/ecosystem.html).
+<img src="site/og.png" alt="Repository Standards - Node" width="760">
 
-Technology best practices for Node/TypeScript, riding on
-[repository-standards](https://github.com/repository-standards/core) -
-the stack layer (Layer 2) of the standard, split out so technology picks can move
-at technology speed while the methodology stays still.
+### The Node stack, already decided
 
-One stack per technology, by policy: variation is a profile or an adoption mode
-inside this repo, never a sibling repo. The linkage to the core is one pointer in
-[`stack.manifest.json`](stack.manifest.json) (the registry back-pointer + technology) -
-never a version range or requirement: the standard is living and always latest.
-It is the same manifest schema the core engine reads, so a brownfield repo is walked
-to this stack the way it is walked to the core: entry by entry, waves, one drift number.
+Next.js and Fastify behind one proxy, every pick argued and recorded,
+proven by a CI run that boots the thing rather than describes it.
+
+[**Documentation**](https://repositorystandards.com/docs/node/) &nbsp;·&nbsp;
+[The decisions](DECISIONS.md) &nbsp;·&nbsp;
+[The starter](starter/README.md) &nbsp;·&nbsp;
+[Adopting a repo you run](ADAPTING.md) &nbsp;·&nbsp;
+[The standard](https://repositorystandards.com)
+
+</div>
+
+---
+
+## One sentence to your agent
+
+```
+> start a new project on repositorystandards.com with the node stack
+```
+
+Already have a repository?
+
+```
+> take this repo onto repositorystandards.com with the node stack
+```
+
+The agent reads the standard, then this layer, then asks you the few things it cannot work
+out for itself. It adapts the picks to what you are building rather than handing you a tree
+to reconcile - which is the difference between adopting a standard and copying a folder.
+
+## What this is
+
+The **stack layer** of [Repository Standards](https://repositorystandards.com): the Node and
+TypeScript picks, the reasoning behind each, and a reference implementation that a weekly CI
+run boots end to end. It is decisions and files, not a framework - nothing here has a version
+you depend on.
+
+One stack per technology, by policy. Variation is a profile or an adoption mode inside this
+repository, never a sibling repository. The link to the core is a pointer, not a version
+range: the standard is living and latest is the only target.
 
 ## What is here
 
