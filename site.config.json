@@ -5,17 +5,58 @@
   "site_url": "https://repositorystandards.com",
   "site_root": "/node/",
   "base_path": "/docs/node/",
+  "$palette": "The biome palette: green-tinted dark, mint accent. The core is orange on near-black; a stack that looked identical would make the two layers indistinguishable, and one that shared no language would read as a different product. Same shapes, own hue.",
+  "palette": {
+    "--bg": "#0A0F0D",
+    "--bg-rgb": "10,15,13",
+    "--bg-panel": "#0C1310",
+    "--fg": "#EAF2ED",
+    "--fg-body": "#C3D0C8",
+    "--muted": "#9DAAA2",
+    "--accent": "#54D6AE",
+    "--accent-rgb": "84,214,174",
+    "--accent-soft": "#37B893",
+    "--accent-2": "#8EE3C6",
+    "--accent-2-rgb": "142,227,198",
+    "--green": "#54D6AE",
+    "--link": "#54D6AE",
+    "--link-visited": "#37B893",
+    "--active-fg": "#54D6AE"
+  },
   "repo_url": "https://github.com/repository-standards/node",
   "core_docs_url": "/docs/",
   "node_docs_url": "/docs/node/",
   "out_dir": "site/docs",
   "sidebar_links": [
-    { "label": "The standard itself", "href": "/docs/" }
+    {
+      "label": "The standard itself",
+      "href": "/docs/"
+    }
   ],
   "pages": [
-    { "src": "README.md", "out": "index.html", "nav": "Home", "group": null },
-    { "src": "DECISIONS.md", "out": "decisions.html", "nav": "The decisions", "group": null },
-    { "src": "ADAPTING.md", "out": "adapting.html", "nav": "Adapting a brownfield", "group": null },
-    { "src": "starter/README.md", "out": "starter.html", "nav": "The starter", "group": null }
+    {
+      "src": "README.md",
+      "out": "index.html",
+      "nav": "Home",
+      "group": null
+    },
+    {
+      "src": "DECISIONS.md",
+      "out": "decisions.html",
+      "nav": "The decisions",
+      "group": null
+    },
+    {
+      "src": "ADAPTING.md",
+      "out": "adapting.html",
+      "nav": "Adapting a brownfield",
+      "group": null
+    },
+    {
+      "src": "starter/README.md",
+      "out": "starter.html",
+      "nav": "The starter",
+      "group": null
+    }
   ]
 }

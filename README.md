@@ -3,7 +3,7 @@
 > Part of the repository-standards ecosystem:
 > [the standard](https://github.com/repository-standards/core) is the
 > engine, this repo is the Node map pack. How it fits:
-> [docs/ecosystem.md](https://github.com/repository-standards/core/blob/main/docs/ecosystem.md).
+> [how it fits together](https://repositorystandards.com/docs/ecosystem.html).
 
 Technology best practices for Node/TypeScript, riding on
 [repository-standards](https://github.com/repository-standards/core) -
@@ -26,23 +26,41 @@ to this stack the way it is walked to the core: entry by entry, waves, one drift
 | [`stack.manifest.json`](stack.manifest.json) | the stack contract AND manifest: technology, registry back-pointer, and the file-by-file entries the align engine reads |
 | [`ADAPTING.md`](ADAPTING.md) | per-entry migration notes for brownfield repos - from theirs to ours without breaking the build |
 
-## Greenfield
+## Getting it
+
+Both routes are one sentence to your coding agent, and both go through the standard -
+this layer is picks and reference files, not a thing you install.
+
+**A new project:**
+
+```
+start a new project on repositorystandards.com with the node stack
+```
+
+**A repository you already run:**
+
+```
+take this repo onto repositorystandards.com with the node stack
+```
+
+The agent reads the standard, works out which of these picks apply to what you are
+building, asks you what it cannot work out for itself, and adapts. That last word is the
+point: [`ADAPTING.md`](ADAPTING.md) exists because a repository with ESLint, Jest and no
+workspace does not want a folder dropped on it - it wants a path, per entry, that does not
+break the build on the way.
+
+**Reading it without an agent** is a fair thing to want, and `starter/` is a real
+application you can run:
 
 ```
 npx degit repository-standards/node/starter my-app
 cd my-app && pnpm install && pnpm dev
 ```
 
-Sign-up -> dashboard works out of the box; `pnpm test:all` proves it. The align
-router in the core repo offers this automatically when you pick Node.
-
-## Brownfield
-
-Adopt the picks, not the tree: read the summary table in `DECISIONS.md`, then copy
-what you need from `starter/` - `biome.json`, `tsconfig.base.json`, the Vitest and
-Playwright configs, the `pnpm-workspace.yaml` supply-chain policy,
-`docker-compose.test.yml`, and the workflow templates in `starter/.github/`.
-Adapt, never blind-copy - the same rule the core standard runs on.
+Sign-up to dashboard works with no setup, and `pnpm test:all` proves it. But treat that as
+reading, not adopting: copying a tree is how a repository ends up carrying decisions nobody
+made for it - which is the failure the standard exists to prevent, and it does not stop
+being one here.
 
 ## Staying current
 
