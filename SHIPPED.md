@@ -20,7 +20,6 @@ your job names, your paths stay yours.
 | `docker-compose.test.yml` | ephemeral real dependencies for integration/e2e - not mocks | copy as-is &middot; optional |
 | `perf/` | local Lighthouse perf-budget runner - report-only, committed baseline + dated history, no external upload; edit config.mjs routes | copy as-is &middot; optional |
 | `scripts/perf-budget.sh` | local perf env prep (seed/build/start) - copy, then adapt its SEED/BUILD/START hooks to your stack | copy as-is &middot; optional |
-| `scripts/check-pnpm-workspace-policy.mjs` | reads pnpm-workspace.yaml's supply-chain policy keys directly - the content check the file entry above can't do on its own | copy as-is &middot; required |
 | `renovate.json` | dependency updates as reviewed diffs, riding the same 7-day cooldown | merge into yours &middot; optional |
 | `.github/workflows/ci.yml` | hardened least-privilege CI template | merge into yours &middot; optional |
 | `.github/workflows/e2e.yml` | the e2e tier in CI, against the docker test stack | merge into yours &middot; optional |
@@ -33,7 +32,7 @@ number across both. These are what it runs here:
 | Runs | Proves |
 |---|---|
 | `pnpm check:all` | format + types + lint green - the stack's own quality gate counted in the same drift number |
-| `node scripts/check-pnpm-workspace-policy.mjs` | the supply-chain policy block in `pnpm-workspace.yaml` (release-age cooldown, save-exact, no unreviewed lifecycle scripts) survived the merge, not just the file - reads the three keys directly, no pnpm on PATH required |
+| the manifest's `requiredKeys` on `pnpm-workspace.yaml` | the supply-chain policy block (release-age cooldown, save-exact, no unreviewed lifecycle scripts) survived the merge, not just the file - the engine reads the three keys directly, no pnpm on PATH required |
 
 Only `check:all` needs pnpm on PATH, and needs more than that to pass rather than fail
 opaquely: this repo's dependencies already installed (`pnpm install` - the full tree, no
