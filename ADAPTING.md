@@ -32,20 +32,20 @@ what you took, not what you skipped. And the order matters more than the speed -
 is written as a move that leaves the build green, because a migration that goes red in the
 middle is a migration that gets reverted.
 
-**Where to record the exception, today:** in `standard.manifest.json`'s own `exceptions`
-array - not in this stack's `stack.manifest.json`, even though that is the file this table
-talks about. `self-verify.mjs` (core repo) merges this stack's `files`/`sections`/`guards`
-into the check it runs, but not its `exceptions` array, so an exception written into
-`stack.manifest.json` is silently never read - a core-repo gap, tracked there, not fixed by
-wording it differently here. Until that lands, add the entry to the standard manifest
-instead, matching the shape `self-verify.mjs` already reads:
+**Where to record the exception:** in this stack's own `stack.manifest.json`, in its
+`exceptions` array - the file this table talks about. `self-verify.mjs` (core repo) merges
+this stack's `files`/`sections`/`guards` and `exceptions` into the check it runs, so an
+entry recorded here is honoured exactly like a core-manifest one:
 
 ```json
 { "kind": "file", "match": "pnpm-workspace.yaml", "reason": "npm workspace kept - no cooldown equivalent, see ADAPTING.md" }
 ```
 
-`kind` is `"file"`, `"section"`, or `"guard"`; `match` is the path exactly as this stack's
-own entry above spells it (or `file#heading` for a section, or the guard `id`).
+`kind` is `"file"`, `"section"`, `"content"`, or `"key"`; `match` is the path exactly as
+this stack's own entry above spells it (`file#heading` for a section, `file#key.path` for
+a declared key). A guard script itself cannot be excepted by presence - that would delete
+the check rather than waive it; a `kind: "content"` exception on a guard is allowed, since
+the guard still runs and must pass.
 
 | Entry | The repo probably has | The move |
 |---|---|---|
