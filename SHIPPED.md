@@ -32,6 +32,7 @@ number across both. These are what it runs here:
 | Runs | Proves |
 |---|---|
 | `pnpm check:all` | format + types + lint green - the stack's own quality gate counted in the same drift number |
+| `node scripts/check-pnpm-workspace-policy.mjs` | the supply-chain policy block in `pnpm-workspace.yaml` (release-age cooldown, save-exact, no unreviewed lifecycle scripts) survived the merge, not just the file - reads the three keys directly, no pnpm on PATH required |
 
 ## What is not here
 
