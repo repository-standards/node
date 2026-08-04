@@ -38,6 +38,14 @@
       "rule": "DECISIONS#8"
     },
     {
+      "path": "scripts/check-pnpm-workspace-policy.mjs",
+      "purpose": "the content check the file entry above can't do on its own - a merge-class file entry only proves pnpm-workspace.yaml exists, not that its policy block survived the merge",
+      "adapt": "copy",
+      "required": true,
+      "profile": "core",
+      "rule": "DECISIONS#8"
+    },
+    {
       "path": "vitest.config.ts",
       "purpose": "unit and integration tiers as separate Vitest projects",
       "adapt": "merge",
@@ -111,6 +119,15 @@
       "purpose": "format + types + lint green - the stack's own quality gate counted in the same drift number",
       "profile": "core",
       "rule": "DECISIONS#3"
+    },
+    {
+      "id": "pnpm-workspace-policy",
+      "run": "node scripts/check-pnpm-workspace-policy.mjs",
+      "kind": "static",
+      "blocks": true,
+      "purpose": "the supply-chain policy block in pnpm-workspace.yaml is present and not weakened - reads the file directly, no pnpm invocation, no network, no install",
+      "profile": "core",
+      "rule": "DECISIONS#8"
     }
   ]
 }
