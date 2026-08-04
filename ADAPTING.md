@@ -32,6 +32,21 @@ what you took, not what you skipped. And the order matters more than the speed -
 is written as a move that leaves the build green, because a migration that goes red in the
 middle is a migration that gets reverted.
 
+**Where to record the exception, today:** in `standard.manifest.json`'s own `exceptions`
+array - not in this stack's `stack.manifest.json`, even though that is the file this table
+talks about. `self-verify.mjs` (core repo) merges this stack's `files`/`sections`/`guards`
+into the check it runs, but not its `exceptions` array, so an exception written into
+`stack.manifest.json` is silently never read - a core-repo gap, tracked there, not fixed by
+wording it differently here. Until that lands, add the entry to the standard manifest
+instead, matching the shape `self-verify.mjs` already reads:
+
+```json
+{ "kind": "file", "match": "pnpm-workspace.yaml", "reason": "npm workspace kept - no cooldown equivalent, see ADAPTING.md" }
+```
+
+`kind` is `"file"`, `"section"`, or `"guard"`; `match` is the path exactly as this stack's
+own entry above spells it (or `file#heading` for a section, or the guard `id`).
+
 | Entry | The repo probably has | The move |
 |---|---|---|
 | `biome.json` | ESLint + Prettier | Two-step, never big-bang: install Biome alongside, port rule intents (`biome migrate eslint --write` gets most), run both until the diff stabilizes, then remove ESLint/Prettier in their own PR. Keep Prettier only if SCSS stays (Biome does not format SCSS - that is the pick's own escape hatch). |
