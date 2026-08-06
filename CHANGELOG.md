@@ -27,7 +27,7 @@ the fallback for a repository with no manifest - this repository read `drift 5 -
 (0/5)`, and the verifier said in the same breath that the number is not the real distance.
 With the manifest in place the real number was `drift 18 - 71% adopted (44/62)`: more than
 three times the skeleton's count, which is the point of the warning the skeleton prints. It
-now reads `drift 5 - 92% adopted (59/64)`, and every one of those five is a Layer 2 entry
+now reads `drift 5 - 92% adopted (55/60)`, and every one of those five is a Layer 2 entry
 described below. Not one core entry is unmet.
 
 **What this alignment cannot reach, and why that is written down rather than worked around.**
