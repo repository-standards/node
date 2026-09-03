@@ -36,7 +36,11 @@
       "required": true,
       "profile": "core",
       "rule": "DECISIONS#8",
-      "requiredKeys": ["minimumReleaseAge", "saveExact", "enablePrePostScripts"]
+      "requiredKeys": [
+        "minimumReleaseAge",
+        "saveExact",
+        "enablePrePostScripts"
+      ]
     },
     {
       "path": "vitest.config.ts",
@@ -106,12 +110,23 @@
   "guards": [
     {
       "id": "stack-check-all",
-      "run": "command -v pnpm >/dev/null 2>&1 || { echo \"pnpm not on PATH - required for check:all (also needs pnpm install once, ~670MB/network - see SHIPPED.md, What gets checked)\" >&2; exit 1; }; pnpm check:all",
+      "run": "pnpm check:all",
       "kind": "static",
       "blocks": true,
       "purpose": "format + types + lint green - the stack's own quality gate counted in the same drift number. Needs pnpm on PATH and dependencies already installed - a real toolchain run, not something a config-file read can substitute for; see SHIPPED.md for the prerequisite",
       "profile": "core",
-      "rule": "DECISIONS#3"
+      "rule": "DECISIONS#3",
+      "requires": [
+        {
+          "kind": "command",
+          "match": "pnpm"
+        },
+        {
+          "kind": "path",
+          "match": "node_modules",
+          "hint": "run pnpm install once - the full tree, network required"
+        }
+      ]
     }
   ]
 }
