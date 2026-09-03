@@ -62,6 +62,27 @@ Two specific habits this repository depends on:
 - **Say when something did not reproduce.** A defect that turns out not to exist is a real
   result and belongs in the record as one, rather than being quietly fixed anyway.
 
+## Say where you are, every minute or two
+
+Long work is silent by default: a run of tool calls, a subagent working in the background,
+and nothing in the chat until it is finished. From the outside that is indistinguishable
+from a hung session, and the only move left to the human is to interrupt the work that was
+going fine.
+
+So while work is running, post **one or two sentences every 60-120 seconds**: what you are
+doing now, and what you are waiting on. Not a recap, not the plan again, not a menu of
+options.
+
+- **Waiting is an update.** Say what you are waiting on and for how long. "Still running,
+  about 8 minutes" is a complete answer.
+- **Never invent progress, and never report a result that has not come back.** Do not
+  present a subagent's findings before the subagent has returned them, and do not guess what
+  it will find. Silence is bad; fabricated progress is worse.
+- **A countable total earns a measured percentage** (`N/M`); an open-ended one earns a
+  labelled estimate (`~Z% (estimate)`), never a bare number dressed up as measured.
+- **It does not replace the answer, and it is not a ceremony.** Work that takes thirty
+  seconds has nothing to report - do not pad it.
+
 ## Conventions
 
 Adopted from the core standard by reference, resolved at `main`:
