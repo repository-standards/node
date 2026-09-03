@@ -1,22 +1,23 @@
 # The repository-standards spec
 
-Version 1.0.13 - the spec is versioned with the standard (`VERSION`). **The standard is
-living and the only target is latest** (ADR-025): a repo complies against the state it
-last aligned to, recorded in its own `.standards-version`. That record is a bookmark -
-it makes an update a delta and self-verify a meaningful assertion, and it never names a
-version to stay at. Tags mark the standard's own development; nothing downstream tracks
-them. The key words MUST, MUST NOT,
-SHOULD and MAY are to be read as in RFC 2119.
+The spec is versioned with the standard: that number lives once, in `VERSION`, and is not
+restated here. **The standard is living and the only target is latest** (ADR-025): a repo
+complies against the state it last aligned to, recorded in its own `.standards-version`.
+That record is a bookmark - it makes an update a delta and self-verify a meaningful
+assertion, and it never names a version to stay at. Tags mark the standard's own
+development; nothing downstream tracks them. The key words MUST, MUST NOT, SHOULD and MAY
+are to be read as in RFC 2119.
 
 This page is the whole normative core. Everything else in the standard explains,
 templates or enforces what is written here; where any other document appears to add
-a requirement, this page wins. Rules are numbered R1-R25 and the numbers are stable -
+a requirement, this page wins. Rules are numbered R1-R27 and the numbers are stable -
 tooling cites them. `standard.manifest.json` is this spec's machine-readable
 projection (each manifest entry names the rule it enforces), and
 `scripts/self-verify.mjs` reports unmet rules as a drift count. Rules the manifest
 cannot check mechanically are verified at review or by the shipped guards the
 skills invoke (the clarify gate checks R12 by script, outside the manifest).
-Rules marked *(scale)* bind team repos; everything else is the core profile and
+Rules marked *(scale)* bind repos on the scale profile - which a repo is on by
+reach, not by headcount (ADR-040); everything else is the core profile and
 binds every repo, a solo one included.
 
 ## Entry and knowledge
@@ -40,6 +41,20 @@ binds every repo, a solo one included.
 - **R3.** Project knowledge - documentation, specs, decisions, conventions - MUST
   live in the repo, versioned with the code. A rule that exists only in chat, a
   wiki or someone's personal agent config does not exist.
+  **In a repo is not the same as in public.** Work whose *publication* is itself the
+  harm - an unfixed vulnerability before its fix ships, a third party's material the
+  repo is contractually bound not to publish, an unannounced commercial move with a
+  set date - MAY be held in a private mirror of the repo (the platform's private
+  advisory fork is the paved road) and MUST rejoin the mainline when the embargo
+  lifts. This defers publication and waives nothing: every rule binds inside that
+  mirror - the spec, the coupled change (R11), the backlog intent (R15) and the
+  changelog entry are written there, while the work happens, not reconstructed
+  afterwards. An embargo MUST name its lifting condition and its owner the moment it
+  starts; one with no stated end is knowledge kept out of the repo, which is exactly
+  what this rule forbids. "Not written up yet", "it is in the chat", and work someone
+  would rather not publish are not embargoes. A repo that is already private needs
+  none of this: its knowledge is in the repo, which is all this rule ever asked
+  (ADR-034).
 - **R4.** Documents are living: they MUST be updated in place. The current version
   is the truth; git is the history. When a change reverses something a future
   reader will need, the document SHOULD say so in one line. History MUST NOT
@@ -59,7 +74,10 @@ binds every repo, a solo one included.
   settled way of doing a recurring thing MUST be written as a rule where the next
   person will look; the standard's taxonomy (adopted by reference from the living standard - always latest) is the map of where each kind lands.
 - **R6.** An accepted record MUST NOT be edited into a different decision. It is
-  superseded by a new record: status flip plus link.
+  superseded by a new record: status flip plus link. An accepted record **binds work
+  in its scope** until it is superseded: a spec, plan or change that contradicts one
+  MUST stop, and then either come into line or supersede the record. Writing around
+  it is not a third option.
 - **R7.** Every fork in the decision checklist that applies to the repo MUST be
   consciously decided and recorded; an area that does not apply MUST say so once,
   in one line. Silence is not an answer - an undecided area gets decided anyway, by
@@ -78,7 +96,10 @@ binds every repo, a solo one included.
 - **R11.** Every capability MUST have an entry in `specs/capability-map.json`
   binding it to code globs. A change to a capability's code MUST land in the same
   PR as its spec update. *(scale)* The coupling guard blocks any PR that breaks
-  this.
+  this. A capability whose implementation lives in a repository this one does not
+  own MUST still have an entry: it names that repository, with a recorded reason,
+  in place of the globs it cannot have. No coupling can be enforced for that part,
+  and the audit names it on every run (ADR-039).
 - **R12.** A spec MUST pass the clarify gate before planning or implementation:
   zero open questions, with explicit deferrals recorded as answers, never dropped.
 - **R13.** Plan and task scaffolding is ephemeral and MUST be removed when the work
@@ -103,23 +124,58 @@ binds every repo, a solo one included.
 - **R16.** Compliance MUST be enforced by tooling, not prose: `self-verify`
   (against the recorded manifest) and `spec-structure` MUST gate CI; *(scale)*
   `spec-guard` too. Aligned means self-verify reports drift 0. These guards, and
-  `facts-check`/`schema-pair`, are dependency-free Node scripts (`scripts/*.mjs`) -
-  a Node runtime MUST be present to run them regardless of the repo's own
-  language or stack (`prerequisites.md`, by reference - it is not a file in this
-  repo). This is a real cost for a
-  non-Node repo, not a rounding error, and adoption should say so plainly rather
-  than let it surface as a surprise the first time CI runs.
+  `facts-check`/`schema-pair`, are dependency-free Node scripts (`scripts/*.mjs`),
+  and the agent guards R19 relies on are shell scripts that read their input with
+  `jq`. A Node runtime, a POSIX shell and `jq` MUST therefore be present to run
+  what the standard ships, regardless of the repo's own language, stack or
+  operating system - the complete list, and what each absence actually does,
+  is `prerequisites.md` (by reference - it is not a file in this
+  repo). This is a real cost for a non-Node repo and for a team on a platform
+  with no POSIX shell, not a rounding error: adoption states it plainly, and a
+  repo that cannot meet it records the guards it consequently does not run as a
+  deviation - rather than letting it surface the first time CI runs, or never
+  surfacing at all, which is what an absent guard does.
 - **R17.** Adoption and updates MUST adapt, never blind-copy: align reconciles a
   repo to the standard - always the latest; the record then names the state
   aligned to, and an update applies the delta between that and latest,
   preserving the repo's recorded deviations (the manifest's `exceptions`).
+- **R26.** Adoption's Step 0 (intake, ADR-020) MUST leave a record of what it
+  measured and asked: `docs/adoption-intake.md`, a required manifest entry
+  filled before any greenfield, brownfield or stack work proceeds and never
+  deferred to a later wave - the same standing this standard already gives
+  `PRODUCT.md` and `docs/personas.md` (ADR-042). An agent that skipped the
+  question round and one that ran it in full produce the same tree without
+  this file; the record is what makes intake checkable rather than merely
+  claimed.
+- **R27.** Adoption's assessment and count gates MUST leave artifacts that carry
+  what the gate is for, not merely files: `docs/adoption-assessment.md`, a
+  required manifest entry rating all eight assessment passes `absent` /
+  `partial` / `solid`, naming the top risks, and grouping every finding by the
+  owner role that must act; and a backlog whose alignment scope block states a
+  total that its own categories sum to, every item naming its owner role
+  (ADR-048). `adoption-gates` reads both for shape. R26 made a gate's artifact
+  checkable by requiring it to exist; these two are the case where existing is
+  not enough, because the count a human says go or no-go on is the part a file
+  can omit while still being present.
 
 ## Releases and hygiene
 
 - **R18.** A PR MUST NOT add a version heading to the changelog and MUST NOT bump
   a version; the maintainer cuts every release. A PR describes its change under
   the changelog's Unreleased heading - at every profile, with no second
-  mechanism.
+  mechanism. A repo that maintains more than one release line (R23) carries one
+  changelog per line, each with its own Unreleased heading, and a PR writes its
+  entry under the heading on the branch it targets - the same one mechanism
+  applied per line, never a second one. A repo that ships more than one
+  independently-versioned, independently-publishable unit from the same tree -
+  a monorepo of packages, gems or crates, each on its own release cadence -
+  carries one changelog per unit instead of one at the root, each with its own
+  Unreleased heading, and a PR writes its entry under the heading of every unit
+  it actually touches. This is a different axis from the release-line clause above, not a
+  variant of it: release lines split a changelog across branches over time,
+  units split it across the same tree at once, and a repo can face either,
+  both or neither - the one mechanism per line becomes one mechanism per unit,
+  never a second kind of mechanism (ADR-044).
 - **R19.** Secrets MUST NOT enter the repo - environment and a secret manager only.
   The shipped secret scan SHOULD gate CI, and agent access to remote databases
   SHOULD be write-blocked by the shipped settings baseline. The security baseline
@@ -135,10 +191,16 @@ binds every repo, a solo one included.
   methodology, for any stack; Layer 2, optional technology best practices living
   in per-technology stack repos, official only when listed in the core registry
   (`stacks.json`) - and one standard with two profiles: core keeps knowledge
-  alive in every repo, scale adds the coordination artifacts teams need. Solo
-  repos meet core alone and are compliant. A stack declares what adopting it
+  alive in every repo, scale adds what carries it to people who are not in the
+  room. Which profile a repo is on is a question about reach - work handed off
+  asynchronously, contributors or readers outside the conversation, a release
+  audience that is not the authors - and never about how many people it has
+  (ADR-040). Solo repos meet core alone and are compliant. A stack declares what adopting it
   means in its own manifest (`stack.manifest.json`, the core schema); a repo
   that adopted one carries it, and `self-verify` counts one drift across both.
+  A repo whose stacks coexist permanently carries one manifest per stack
+  (`stack.<technology>.manifest.json`); every one is read and the drift stays a
+  single number (ADR-037).
 
 ## Supply chain
 
@@ -164,30 +226,48 @@ binds every repo, a solo one included.
 
 ## Integration and history
 
-- **R23.** The mainline's history MUST read as one finished unit of work per PR.
-  A branch is brought up to date by **rebasing onto its base**; the base MUST NOT
-  be merged back into the branch. Every PR MUST be based on the mainline, never
-  on another open PR's branch. A PR MUST land by **rebase-merge** (the paved
-  road) or squash-merge - decided once and recorded with the branching decision
-  (R7); the platform's linear-history protection SHOULD enforce it. Rebase-merge
-  publishes every commit, so it MUST NOT be chosen unless each commit is a
-  complete, buildable, reviewed change; a repo that will not hold that bar
-  squashes instead. A branch MAY be rewritten while it is the author's alone;
-  once another person or branch builds on it, it MUST NOT be (ADR-026).
+- **R23.** The mainline's history MUST read as one finished unit of work per
+  **reviewed change**. The pull request is the paved road's unit of review; a
+  repo whose review does not happen on the git host has another one - a
+  mailing-list patch series, a Gerrit or Phabricator change - and MUST name it
+  in the branching decision (R7), because every clause below binds to that unit
+  and not to a platform feature. A branch is brought up to date by **rebasing
+  onto its base**; the base MUST NOT be merged back into the branch. Every
+  reviewed change MUST be based on the branch it will merge into - the mainline,
+  or a **maintained release line** - never on another open change's branch. A
+  maintained release line is a long-lived, protected branch that the repo has
+  declared as supported with its branching decision (R7) and never rewrites;
+  every requirement in this rule binds it exactly as it binds the mainline. A
+  fix that applies to more than one line MUST land on the mainline first and
+  reach each supported line as its own reviewed change against that line, unless
+  the mainline no longer carries the affected code (ADR-035). It MUST land by
+  **rebase-merge** (the paved road) or squash-merge - decided once and recorded
+  with the branching decision (R7); the platform's linear-history protection
+  SHOULD enforce it where the platform has one. Rebase-merge publishes every
+  commit, so it MUST NOT be chosen unless each commit is a complete, buildable,
+  reviewed change; a repo that will not hold that bar squashes instead. A branch
+  MAY be rewritten while it is the author's alone; once another person or branch
+  builds on it, it MUST NOT be (ADR-026).
 
 - **R25.** A PR that changes what the standard ships describes that change under
-  `CHANGELOG.md`'s `## Unreleased` heading (R18) - it MUST NOT move the version itself.
-  The **release that promotes `Unreleased`** MUST move the version, and the version
-  MUST be one fact restated nowhere unchecked: every surface that carries it is
-  declared and verified against its single home (R4). **Patch is the default and
-  covers nearly everything** - the ordinary release, however much prose it moves.
-  **Minor is a judgment, not a trigger**: it says an adopter should look, and it is
-  spent sparingly. Do not derive it mechanically from "a rule was added" or "a path
-  changed"; that reasoning promotes routine work and inflates the number until it
-  stops meaning anything. The patch position is not a two-digit field: 1.0.12 is
-  followed by 1.0.13, then eventually 1.0.99, then 1.0.100 - each larger than the
-  last, never resetting to a two-digit assumption. Versions mark this standard's own
-  development; an adopting repo still tracks latest and never a pin (ADR-025).
+  `CHANGELOG.md`'s `## Unreleased` heading (R18's one home of history) and MUST
+  move the version itself, in the same PR - this repository's own workflow,
+  deliberately tighter than the R18 default it ships, because here the
+  maintainer reviews every PR (CONTRIBUTING.md) - and the version MUST be one
+  fact restated nowhere unchecked: every
+  surface that carries it is declared and verified against its single home (R4).
+  **Patch is the default and covers nearly everything** - the ordinary PR, however
+  much prose it moves, bumps patch with no request required. **Minor is a judgment,
+  not a trigger**: it is the requester's explicit, stated instruction on that PR,
+  never derived mechanically from "a rule was added" or "a path changed"; that
+  reasoning promotes routine work and inflates the number until it stops meaning
+  anything, and it is spent sparingly. A PR MAY be told explicitly not to bump at
+  all, leaving its entry under `Unreleased` for a later PR to promote; absent a
+  stated MINOR, MAJOR or no-bump instruction, patch is what ships. The patch
+  position is not a two-digit field: 1.0.12 is followed by 1.0.13, then
+  eventually 1.0.99, then 1.0.100 - each larger than the last, never resetting to a
+  two-digit assumption. Versions mark this standard's own development; an adopting
+  repo still tracks latest and never a pin (ADR-025).
 
 
 ## Data and schema
@@ -210,6 +290,15 @@ binds every repo, a solo one included.
   where the stack has a generator that does not silently drop what DDL can
   express; type agreement and generation are per-stack mechanics and live in the
   stack repos (ADR-027).
+  **Owning a database and shipping the mechanism that changes one are different
+  shapes.** A repo whose product *is* the schema change - a migration library, an
+  ORM's DDL layer, a schema toolkit - owns no database: what it emits runs against
+  somebody else's. `database/schema/` and the typed twin therefore do not apply,
+  and the repo says so once (R7). What it does own is that emitted DDL, for every
+  backend it claims to support, and that is an interface contract: it MUST be
+  specified verbatim per backend (R9), including where the backends genuinely
+  differ, so a supported backend's gap is something the spec states rather than
+  something a consumer discovers in production.
 
 ## What this standard does not do
 

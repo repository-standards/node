@@ -2,7 +2,7 @@
 // self-verify - prove this repo still complies with the standard it is pinned to.
 //
 // The "verify" step of the versioned-standard mechanism. Runs after adopting the
-// standard (align-to-standards), after updating it (update-to-version), and in CI on
+// standard (align-to-standards), after updating it (update-to-latest), and in CI on
 // every PR - the same pass/fail each time. This is the mechanical tier; the judgment
 // tier (are the catalogued decisions actually recorded? are the money/security specs
 // buildable?) is reviewed at PR - see self-verify.md, adopted by reference:
@@ -34,13 +34,24 @@
 //      accepted silently as deprecated aliases
 //      (solo -> core, team -> scale). An entry with no profile counts as core, so
 //      manifests from before ADR-011 still check in full either way.
+//   2b. A guard whose prerequisites are absent is NOT RUN, and that is reported as its own
+//      thing rather than as drift. Running `pnpm check:all` on a machine with no pnpm used
+//      to score exactly what a genuine lint failure scores, so the number said "this
+//      laptop" in the words of one that says "this repo".
+//   2c. removedPaths (ADR-052): every path the standard has removed must be absent from this
+//      repo - hand-maintained at release time, not diffed from a tree, so the check needs no
+//      provenance data; a repo that never carried the path passes trivially. Waivable through
+//      `exceptions` like any other required entry.
 //   3. Stray transition skills (ADR-009): align-to-standards, onboard-repo, modernize,
 //      greenfield-start never ship in a consuming repo. One found under .claude/skills/
 //      is a hand-copy mistake, flagged as a warning - it does not add to drift.
+//   4. What drift 0 does NOT say. The number is the manifest, so a repo can meet every
+//      entry and have specified no behaviour at all. When no capability spec exists, the
+//      verdict says so instead of printing an unqualified "compliant with the standard".
 //
 // Usage:
 //   node scripts/self-verify.mjs                  # gate: exit 1 on any failure
-//   node scripts/self-verify.mjs --version 1.0.13  # also assert the record equals a target
+//   node scripts/self-verify.mjs --version x.y.z  # also assert the record equals a target
 //   node scripts/self-verify.mjs --warn           # report only, always exit 0
 //   node scripts/self-verify.mjs --profile core   # core-profile entries only (ADR-011);
 //                                                 # without the flag, the repo's manifest
@@ -55,6 +66,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { delimiter } from "node:path";
 
 const METHOD_DOC = "https://github.com/repository-standards/core/blob/main/docs/method/self-verify.md";
 
@@ -92,11 +104,37 @@ const exists = (p) => {
   return parts.length > 0;
 };
 
+// The same path, spelled differently, on a filesystem that cannot tell them apart.
+//
+// Reporting "CHANGELOG.md is missing" is correct - the manifest names that case and the repo does
+// not carry it. What follows from the report is not: the adopter writes the file, and on APFS or
+// NTFS that write lands ON the existing `ChangeLog.md` and destroys it. Reproduced on APFS: after
+// writing `CHANGELOG.md` beside a `ChangeLog.md`, the directory still lists one file and its
+// contents are the new ones. A repository's entire release history, gone, by following the
+// procedure exactly.
+//
+// So a missing required file is checked for a case twin before the adopter is told to create it.
+// `existsSync` resolves case-insensitively where the platform does, which is precisely the signal:
+// the listing says no and the kernel says yes.
+const caseTwin = (p) => {
+  const parts = String(p).split("/").filter((s) => s && s !== ".");
+  if (!parts.length) return null;
+  const name = parts[parts.length - 1];
+  const dir = parts.slice(0, -1).join("/") || ".";
+  const twin = [...listing(dir)].find((e) => e !== name && e.toLowerCase() === name.toLowerCase());
+  return twin ? (dir === "." ? twin : `${dir}/${twin}`) : null;
+};
+
 const results = [];
 const pass = (name, msg) => results.push({ ok: true, name, msg });
 const fail = (name, msg) => results.push({ ok: false, name, msg });
 const note = (name, msg) => results.push({ ok: true, name, msg, dim: true });
 const warning = (name, msg) => results.push({ ok: true, name, msg, isWarning: true });
+// A check that could not run at all is neither a pass nor a failure, and collapsing it into
+// either is how a number stops meaning what it says. It is dim (so it never enters the
+// adoption arithmetic - it was never assessed) but it is counted and named in the verdict,
+// because the one thing a skipped blocking check must not be is quiet.
+const unrun = (id, msg) => results.push({ ok: true, name: "guard", msg, dim: true, isUnrun: true, id });
 
 // 0. load the manifest (ADR-005) ------------------------------------------------
 let manifest = null;
@@ -109,16 +147,44 @@ if (exists("standard.manifest.json")) {
 }
 
 // 0b. a repo that adopted a stack carries the stack's manifest too (ADR-016):
-// same schema, second file - the engine eats both and drift is one number.
-if (manifest && exists("stack.manifest.json")) {
-  try {
-    const stack = JSON.parse(readFileSync("stack.manifest.json", "utf8"));
-    note("stack", `stack manifest present: ${stack.technology || "unnamed"} - technology layer counted in the same drift number (ADR-016/022)`);
+// same schema, second file - the engine eats them all and drift is one number.
+//
+// A repo whose stacks genuinely coexist carries one file per stack,
+// `stack.<technology>.manifest.json` (ADR-037). The engine read exactly one filename, so a
+// repo like flutter/flutter - a Dart framework beside a native engine, permanently, neither
+// migrating to the other - could register one stack and the second was invisible: no entry
+// checked, no drift, and nothing said a manifest had been ignored. Every match is read, in
+// filename order so two runs on one tree report in the same order.
+const STACK_MANIFEST = /^stack(?:\.[A-Za-z0-9][A-Za-z0-9._-]*)?\.manifest\.json$/;
+if (manifest) {
+  const declaredBy = new Map(); // path -> the stack manifest that claimed it first
+  for (const file of [...listing(".")].filter((f) => STACK_MANIFEST.test(f)).sort()) {
+    let stack;
+    try {
+      stack = JSON.parse(readFileSync(file, "utf8"));
+    } catch (e) {
+      fail("stack", `${file} is present but unparseable: ${e.message}`);
+      continue;
+    }
+    // The stack's own version was carried and never spoken: the run named the technology and
+    // stopped, so a repo sitting on a stack version several releases behind read exactly like
+    // one on the newest. Printing it does not detect staleness - nothing here knows what the
+    // stack repo currently ships (ADR-022: linked, not version-locked) - but an unspoken
+    // number cannot even be compared by hand.
+    const stackVersion = stack.version ? `@ ${stack.version}` : "with no version declared";
+    note("stack", `${file}: ${stack.technology || "unnamed"} ${stackVersion} - technology layer counted in the same drift number (ADR-016/022)`);
+    if (!stack.version) warning("stack", `${file} declares no version - nothing records which state of the stack this repo aligned to`);
+    // Two stacks claiming one path is not drift and is not this repo's to resolve - but it
+    // does mean the same file is checked twice and counted twice, so the number needs the
+    // caveat out loud rather than a quiet collapse that picks a winner.
+    for (const f of stack.files || []) {
+      const first = declaredBy.get(f.path);
+      if (first) warning("stack", `${f.path} is declared by both ${first} and ${file} - it is checked once per declaration, so it counts twice; the two stacks disagree about who owns the path (report it to them)`);
+      else declaredBy.set(f.path, file);
+    }
     for (const k of ["files", "sections", "guards", "exceptions"]) {
       manifest[k] = [...(manifest[k] || []), ...(stack[k] || [])];
     }
-  } catch (e) {
-    fail("stack", `stack.manifest.json is present but unparseable: ${e.message}`);
   }
 }
 
@@ -127,8 +193,15 @@ if (manifest && exists("stack.manifest.json")) {
 // scale = check everything. solo/team are accepted as deprecated aliases.
 const profileArg = profileFlag || (manifest && manifest.profile) || "scale";
 const coreOnly = profileArg === "core" || profileArg === "solo";
-if (!profileFlag && manifest && manifest.profile) {
-  if (["core", "scale", "solo", "team"].includes(manifest.profile)) {
+if (!profileFlag && manifest) {
+  if (!manifest.profile) {
+    // The shipped manifest declares the field, so a copy without it predates that or lost it
+    // in a merge - and both this and the shipped CI gate then fall back to scale. Falling
+    // back is right (the stricter tier, never the looser one); doing it without saying so is
+    // not: a core repo reads "compliant" while being measured against gates ADR-011 scopes to
+    // scale, and R11's own *(scale)* marker becomes text nothing acts on.
+    warning("profile", "the manifest copy declares no profile - defaulted to scale; declare core or scale so the tier is a decision, not a fallback (ADR-011)");
+  } else if (["core", "scale", "solo", "team"].includes(manifest.profile)) {
     note("profile", `profile "${manifest.profile}" declared in the manifest copy - used as the default`);
   } else {
     warning("profile", `manifest declares unknown profile "${manifest.profile}" - treated as scale (valid: core, scale)`);
@@ -157,8 +230,83 @@ if (manifest && pinned && manifest.version && manifest.version !== pinned) {
 
 // 2. manifest checks, or fallback skeleton --------------------------------------
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Markdown has two heading forms and this only ever looked for one. `## Unreleased` matched;
+// `Unreleased` underlined with `---` or `===` - setext, equally valid, and what a changelog
+// written before ATX became the habit tends to use - did not. A repository whose changelog is
+// setext throughout was told its `Unreleased` section was missing while the heading sat there
+// in the file, and the only way to satisfy the check was to restyle somebody else's changelog.
+//
+// Setext underlines the PREVIOUS line, so the text and its marker are two lines that have to be
+// read together. Fenced blocks are skipped: a sample changelog inside a code fence is an example
+// of a section, not the section.
+const FENCE_LINE = /^\s*(?:```|~~~)/;
+function hasHeading(body, heading) {
+  const atx = new RegExp(`^#{1,6}\\s+.*${escapeRe(heading)}`, "mi");
+  if (atx.test(body)) return true;
+  const lines = body.split("\n");
+  const wanted = new RegExp(`^\\s*${escapeRe(heading)}\\b.*$`, "i");
+  let inFence = false;
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (FENCE_LINE.test(lines[i])) { inFence = !inFence; continue; }
+    if (inFence) continue;
+    // A setext underline is a run of `=` or `-` alone on the line. A single `-` is a list item
+    // and a row of `---` under a table row is a delimiter, so the previous line has to read as
+    // a heading rather than as content.
+    if (!/^\s*(=+|-{2,})\s*$/.test(lines[i + 1])) continue;
+    if (wanted.test(lines[i])) return true;
+  }
+  return false;
+}
 const hasFile = (p, alts = []) => [p, ...alts].some((x) => exists(x));
 const isCore = (entry) => !entry.profile || entry.profile === "core"; // no profile = core (pre-ADR-011)
+
+// Present on disk is not present in the repository. A required entry sitting under an
+// ignore rule reported PASS and counted toward drift 0, while a fresh clone had nothing
+// there: the roster, the decision records and the product pages could all be written,
+// verified as compliant, and then not be in the commit. Found on a 19-year platform whose
+// .gitignore excludes /docs/, which is where 16 of the manifest's 48 file entries live -
+// the repo read `drift 0 - compliant with the standard` with none of them tracked.
+//
+// The test is deliberately ignored-AND-untracked, not merely untracked. Mid-adoption, files
+// are authored before they are staged, and failing that would fire on every honest run of
+// the very procedure that creates them. An ignore rule is different in kind: it cannot be
+// resolved by getting round to `git add`, because `git add` refuses it.
+//
+// git is optional. A repo that is not a git work tree (a scaffold before `git init`, an
+// export) is checked exactly as before rather than being told it failed something it has no
+// way to satisfy.
+const gitOk = (() => {
+  try {
+    execSync("git rev-parse --is-inside-work-tree", { stdio: ["ignore", "pipe", "ignore"] });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+const trackedPaths = (() => {
+  if (!gitOk) return null;
+  try {
+    return new Set(execSync("git ls-files", { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).split("\n").filter(Boolean));
+  } catch {
+    return null;
+  }
+})();
+// Returns the matching ignore rule when the path is ignored and nothing under it is tracked,
+// otherwise null. A directory entry counts as tracked when any file beneath it is.
+const ignoredPath = (p) => {
+  if (!p || !trackedPaths) return null;
+  const prefix = p.endsWith("/") ? p : `${p}/`;
+  for (const t of trackedPaths) if (t === p || t.startsWith(prefix)) return null;
+  try {
+    // -v prints "<ignore-file>:<line>:<pattern>\t<path>" and exits 0 only on a match.
+    const out = execSync(`git check-ignore -v -- ${JSON.stringify(p)}`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const rule = out.split("\t")[0].trim();
+    return rule || "matched an ignore rule";
+  } catch {
+    return null; // exit 1 = not ignored; anything else is not a claim worth failing on
+  }
+};
 let scaleSkipped = 0; // entries skipped by --profile core, across files/sections/guards
 
 // exceptions (R17): a deliberate, recorded deviation from a required entry - the
@@ -244,7 +392,7 @@ const contentHash = (p) => {
     return null;
   }
 };
-const CONTENT_HINT = "run update-to-version to take the standard's copy, or record the change as an exception: { \"kind\": \"content\", \"match\": \"<path>\", \"reason\": \"...\" }";
+const CONTENT_HINT = "run update-to-latest to take the standard's copy, or record the change as an exception: { \"kind\": \"content\", \"match\": \"<path>\", \"reason\": \"...\" }";
 
 // A ported directory (`.agents/skills` standing in for `.claude/skills`, R22) is a
 // different FORMAT by design, so bytes cannot be the test - but a directory that merely
@@ -289,8 +437,27 @@ const verifyContent = (f) => {
   if (exceptionFor("file", f.path)) return; // the whole entry is already a recorded deviation
   if (!exists(f.path)) {
     const alt = (f.altPaths || []).find((x) => exists(x));
-    if (alt && typeof f.sha256 !== "string") verifyPortedTree(f, alt);
-    else note("content", `${f.path} resolved through an alternate path - content not compared (an alternate location holds the repo's own form of it)`);
+    // Unreachable through the files loop, which only calls this once a path resolved -
+    // said out loud rather than returned silently, because a content check that quietly
+    // examines nothing is the failure this whole section is about.
+    if (!alt) {
+      note("content", `${f.path} is absent and no alternate path resolved - content not compared (reported by the files check)`);
+      return;
+    }
+    if (typeof f.sha256 !== "string") {
+      verifyPortedTree(f, alt);
+      return;
+    }
+    // A DIRECTORY at an alternate path may legitimately be a port - a different format,
+    // checked by name above. A FILE cannot: an altPath says the standard's file lives
+    // somewhere else here, not that something else lives there instead. This was the same
+    // hole one entry-shape over - the entry resolved, nothing was compared, and the run
+    // said so in a dim note nobody reads as "unverified".
+    if (contentHash(alt) === f.sha256) {
+      pass("content", `${alt} stands in for ${f.path} and carries the standard's copy`);
+      return;
+    }
+    failOrExcept("content", f.path, "content", `${alt} stands in for ${f.path} but its content is not the standard's - an alternate path is a different location for the standard's file, not permission for a different file (${CONTENT_HINT})`);
     return;
   }
   if (typeof f.sha256 === "string") {
@@ -391,7 +558,156 @@ const verifyKeys = (f) => {
   }
 };
 
+// 2c. what a guard needs before it can answer anything ---------------------------
+// A guard reports on the repo only when the tools it shells out to are actually here. With
+// no pnpm on PATH, `pnpm check:all` exited non-zero with a bare `command not found` and
+// scored `drift 1 - 99% adopted (78/79)` - byte for byte what a genuine lint failure on a
+// compliant repo scores. Two different questions, one number, no way to tell them apart.
+// prerequisites.md already states the rule this restores: self-verify scores the repo's
+// structure, not the machine it runs on, and a laptop missing a tool is not repository
+// drift.
+//
+// So a guard whose prerequisites are absent is NOT RUN: never drift, never a pass, named in
+// its own category and again in the verdict. Prerequisites come from two places.
+//
+//   Declared, on the guard entry:
+//     "requires": [{ "kind": "command", "match": "pnpm" },
+//                  { "kind": "path", "match": "node_modules", "hint": "..." }]
+//   The `path` kind is what keeps a compliance check from having side effects. With a
+//   package manager present and its dependency tree absent, RUNNING the guard is what
+//   installs the tree - off the network, as a side effect of asking a question about the
+//   repo; recorded once at 376 packages and ~670 MB, and reproducible on demand, though
+//   whether it fires at all turns out to depend on the package manager's local settings.
+//   The only way not to do it is to look before shelling out, and only the entry that knows
+//   the toolchain can say what to look for.
+//
+//   Inferred, from `run`: every bare command word that is no shell builtin and resolves
+//   nowhere on PATH. This is the part that needs nothing declared, so a stack whose guard
+//   predates the field still gets a legible answer.
+//
+// Inference errs toward RUNNING the guard, in every direction it can be wrong, because the
+// wrong answer here is a check that quietly stops running:
+//   - quoted text is blanked before anything is split, so a tool named inside an error
+//     message is never probed;
+//   - a word carrying a `/` is left to the script rule below, since a relative path means
+//     something different after a `cd`;
+//   - `a || b` is a FALLBACK, not two requirements: the group is satisfied when either side
+//     resolves, and reporting `b` because `a` was taken would skip a guard that works;
+//   - the node executing this file is never probed - a runtime invoked by absolute path
+//     from outside PATH would otherwise silence every guard at once;
+//   - anything this cannot parse runs exactly as it did before.
+const SH_WORDS = new Set(
+  (": . [ [[ ]] alias bg break builtin case cd command continue do done echo elif else esac eval exec exit " +
+    "export false fc fg fi for function getopts hash if in jobs kill let local newgrp printf pwd read " +
+    "readonly return set shift source test then time times trap true type ulimit umask unalias unset until wait while").split(" "),
+);
+const ALWAYS_AVAILABLE = new Set(["node", "nodejs"]);
+const PATH_EXTS = process.platform === "win32" ? ["", ".exe", ".cmd", ".bat"] : [""];
+const onPath = (cmd) =>
+  (process.env.PATH || "")
+    .split(delimiter)
+    .filter(Boolean)
+    .some((dir) =>
+      PATH_EXTS.some((ext) => {
+        try {
+          return statSync(`${dir}/${cmd}${ext}`).isFile();
+        } catch {
+          return false;
+        }
+      }),
+    );
+
+const commandWord = (seg) => seg.trim().replace(/^[({!]+\s*/, "").replace(/^(?:\w+=\S*\s+)+/, "").split(/\s+/)[0] || "";
+const probeable = (w) => /^[A-Za-z][\w.+-]*$/.test(w) && !SH_WORDS.has(w) && !ALWAYS_AVAILABLE.has(w);
+// `||` is swapped for a sentinel the operator split cannot see, so a fallback chain stays
+// ONE group; every other operator separates things that all have to be there (both stages
+// of a pipeline, both sides of `&&`). The sentinel carries no shell metacharacter of its
+// own - one that did would be found by the very split it is hiding from, and no NUL, which
+// tree-check forbids in tracked text for exactly the reason it would be convenient here.
+const OR = "@@self-verify-or@@";
+const unresolvedCommands = (run) => {
+  const missing = new Set();
+  const sanitized = String(run).replace(/'[^']*'/g, "''").replace(/"[^"]*"/g, '""').split("||").join(OR);
+  for (const group of sanitized.split(/&&|[;|&\n]/)) {
+    const words = group.split(OR).map(commandWord).filter(Boolean);
+    // An alternative this cannot classify - a shell builtin, the running node, a redirect, a
+    // quoted remnant - is one that may well work, so the group is satisfied and nothing is
+    // reported. Only a group whose every alternative is a plain name that resolves nowhere
+    // is a prerequisite this machine does not have.
+    if (!words.length || words.some((w) => !probeable(w) || onPath(w))) continue;
+    for (const w of words) missing.add(w);
+  }
+  return missing;
+};
+
+const REQUIRE_KINDS = ["command", "path"];
+// A malformed `requires` entry is drift, for the same reason a malformed exception is: a
+// prerequisite nobody can evaluate is how a blocking guard stops running while the run
+// still reads green.
+const missingPrerequisites = (g) => {
+  const missing = [];
+  const declared = new Set();
+  for (const r of g.requires || []) {
+    const label = `${r?.kind ?? "(no kind)"}:${r?.match ?? "(no match)"}`;
+    if (!REQUIRE_KINDS.includes(r?.kind) || !String(r?.match ?? "").trim()) {
+      fail("guard", `${g.id} carries an unusable requires entry ${label} - each one is { "kind": "command"|"path", "match": "...", "hint": "..." (optional) }, and a prerequisite that cannot be evaluated would stop a blocking guard running while the run still reads green`);
+      continue;
+    }
+    if (r.kind === "command") declared.add(r.match);
+    const met = r.kind === "command" ? onPath(r.match) : exists(r.match);
+    if (!met) missing.push(`${r.match} ${r.kind === "command" ? "is not on PATH" : "is absent from this repo"}${r.hint ? ` (${r.hint})` : ""}`);
+  }
+  for (const c of unresolvedCommands(g.run)) {
+    if (!declared.has(c) && !onPath(c)) missing.push(`${c} is not on PATH`);
+  }
+  return missing;
+};
+
+// The branch a shipped workflow triggers on.
+//
+// All three workflows ship `branches: [main]`, and the manifest can only require that a key
+// EXISTS - `on.push`, `on.pull_request` - never what it contains. So a repository whose default
+// branch is `master` takes the file verbatim, reaches drift 0, and carries a push trigger that
+// can never fire. `spec-guard.yml`'s own comment says it is gated from the first push; on that
+// repo the sentence was silently false, and nothing anywhere said so.
+//
+// A WARN, not drift: the file is merge-class and the branch name is exactly the kind of local
+// adaptation an adopter is expected to make. What was missing was anyone telling them.
+//
+// Silent when the default branch cannot be read - a repo with no remote is not a repo with a
+// problem, and guessing from the current branch would fire on every feature branch.
+const defaultBranch = () => {
+  try {
+    const ref = execSync("git symbolic-ref --short refs/remotes/origin/HEAD", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return ref.replace(/^origin\//, "") || null;
+  } catch {
+    return null;
+  }
+};
+
+const checkWorkflowBranches = () => {
+  const branch = defaultBranch();
+  if (!branch) return;
+  for (const f of manifest.files || []) {
+    if (!/^\.github\/workflows\/.*\.ya?ml$/.test(f.path)) continue;
+    const at = [f.path, ...(f.altPaths || [])].find((x) => exists(x));
+    if (!at) continue;
+    const named = [...readFileSync(at, "utf8").matchAll(/^\s*branches:\s*\[([^\]]*)\]/gm)]
+      .flatMap((m) => m[1].split(",").map((b) => b.trim().replace(/^['"]|['"]$/g, "")))
+      .filter(Boolean);
+    if (!named.length || named.includes(branch)) continue;
+    warning(
+      "file",
+      `${at} triggers on ${named.map((b) => `"${b}"`).join(", ")} and this repo's default branch is "${branch}" - the trigger cannot fire, and nothing else reports it because the manifest can only require that the key exists, not what it names`,
+    );
+  }
+};
+
 if (manifest) {
+  checkWorkflowBranches();
   // method docs adopted by reference (ADR-004/023): named, never file-checked
   if ((manifest.references || []).length) {
     note("reference", `${manifest.references.length} method docs adopted by reference from the living standard - always latest (ADR-023/025); read them in the standards repo, never copy them here`);
@@ -401,26 +717,59 @@ if (manifest) {
     if (coreOnly && !isCore(f)) { scaleSkipped++; continue; }
     if (f.adapt === "reference") { note("file", `${f.path} is reference-class - adopted by link to the living standard, no file expected here`); continue; }
     if (hasFile(f.path, f.altPaths)) {
+      const ignored = ignoredPath([f.path, ...(f.altPaths || [])].find((x) => exists(x)));
+      if (ignored) {
+        failOrExcept("file", f.path, "file", `${f.path} exists on this disk but is git-ignored and untracked (${ignored}) - it is not in the repository, so a fresh clone does not have it`);
+        continue;
+      }
       pass("file", `${f.path} (${f.purpose})`);
       verifyContent(f);
       verifyKeys(f);
       continue;
     }
+    // Said before the branch, because every branch below ends with somebody creating the file -
+    // `fill-from-repo` most of all, since that class means "you will author this at adoption".
+    const twin = caseTwin(f.path);
+    if (twin) {
+      warning(
+        "file",
+        `${f.path} is missing and ${twin} is here - the same name in another case. DO NOT CREATE ${f.path}: on a case-insensitive filesystem (macOS, Windows) that write lands on ${twin} and its contents are lost. Record an exception for ${f.path}, or agree a rename with the repo's owners first`,
+      );
+    }
     if (skeleton && f.adapt === "fill-from-repo") note("file", `${f.path} is authored at adoption - absent from the skeleton by design`);
     else if (f.required) failOrExcept("file", f.path, "file", `${f.path} missing - ${f.purpose}`);
     else note("file", `${f.path} absent (optional) - ${f.purpose}`);
   }
-  // required sections within files
+  // required sections within files.
+  // A section names a file the files list may already allow somewhere else: reading only
+  // s.file made a repo carrying its changelog at the entry's OWN declared alternate
+  // (docs/CHANGELOG.md) pass the file entry and then fail the section with "CHANGELOG.md
+  // missing" - about a file that was not missing, and with no way to close the drift
+  // except moving the file to the path the altPath exists to avoid. The exception key
+  // stays on s.file so a recorded deviation keeps working wherever the file resolves.
+  const altsOf = new Map((manifest.files || []).map((f) => [f.path, f.altPaths || []]));
   for (const s of manifest.sections || []) {
     if (coreOnly && !isCore(s)) { scaleSkipped++; continue; }
-    if (!exists(s.file)) {
+    const at = [s.file, ...(altsOf.get(s.file) || [])].find((x) => exists(x));
+    if (!at) {
       if (s.required) failOrExcept("section", `${s.file}#${s.heading}`, "section", `${s.file} missing, so "${s.heading}" cannot be checked`);
       continue;
     }
-    const body = readFileSync(s.file, "utf8");
-    const re = new RegExp(`^#{1,6}\\s+.*${escapeRe(s.heading)}`, "mi");
-    if (re.test(body)) pass("section", `${s.file} > "${s.heading}"`);
-    else if (s.required) failOrExcept("section", `${s.file}#${s.heading}`, "section", `${s.file} is missing the "${s.heading}" section - ${s.purpose}`);
+    const body = readFileSync(at, "utf8");
+    if (hasHeading(body, s.heading)) pass("section", `${at} > "${s.heading}"`);
+    else if (s.required) failOrExcept("section", `${s.file}#${s.heading}`, "section", `${at} is missing the "${s.heading}" section - ${s.purpose}`);
+  }
+  // removed paths (ADR-052) - a path the standard has taken away must not still be here.
+  // Unconditional existence check: needs no provenance commit, no history, nothing but the
+  // manifest this repo already carries, so a repo that never had the path passes for free.
+  for (const r of manifest.removedPaths || []) {
+    if (!exists(r.path)) { pass("removed", `${r.path} is gone (removed since ${r.since})`); continue; }
+    failOrExcept(
+      "file",
+      r.path,
+      "removed",
+      `${r.path} still exists but the standard removed it in ${r.since}${r.note ? ` - ${r.note}` : ""} - delete it (migrate its content first if the note says to), or record an exception if it is deliberately kept`,
+    );
   }
   // static guards (skip self to avoid recursion; diff guards run in CI on the PR diff)
   if (skeleton) note("guard", "guards run in an adopted repo, not on the skeleton - skipped (--skeleton)");
@@ -429,10 +778,17 @@ if (manifest) {
     if (g.id === "self-verify") continue;
     if (g.kind === "diff") { note("guard", `${g.id} is diff-based - runs in CI on the PR diff, not here`); continue; }
     const script = (g.run.match(/scripts\/[\w.-]+\.mjs/) || [])[0];
-    // Not installed = skipped, because optional guards legitimately are not (no database,
-    // no cycles). That tolerance is why a guard's script may not be excepted: excepting it
+    // Not installed = not run, because optional guards legitimately are not (no database,
+    // no sprints). That tolerance is why a guard's script may not be excepted: excepting it
     // would turn "missing required file" into "check silently absent". See EXCEPTION_KINDS.
-    if (script && !exists(script)) { note("guard", `${g.id} not installed (${script}) - skipped`); continue; }
+    // It used to be a dim note, which is most of the way to silent - it now goes through the
+    // same category as a missing prerequisite and is counted in the verdict.
+    if (script && !exists(script)) { unrun(g.id, `${g.id} NOT RUN - its script ${script} is not installed in this repo`); continue; }
+    const lacking = missingPrerequisites(g);
+    if (lacking.length) {
+      unrun(g.id, `${g.id} NOT RUN - ${lacking.join("; ")}. A check that could not start has measured nothing, so it counts as neither drift nor adoption (see prerequisites.md in the standards repo); supply what it needs and re-run to get an answer for this one`);
+      continue;
+    }
     try {
       execSync(g.run, { stdio: "pipe" });
       pass("guard", `${g.id} passed`);
@@ -444,9 +800,30 @@ if (manifest) {
   if (coreOnly && scaleSkipped > 0) {
     note("profile", `${scaleSkipped} scale-only entr${scaleSkipped === 1 ? "y" : "ies"} skipped (--profile core)`);
   }
-  // decisions are judgment-tier: a human confirms they are actually recorded at review
+  // Decisions are judgment-tier: a human confirms they are actually recorded at review.
+  //
+  // The catalog is a MENU, and the summary here used to print its length - "8 catalogued
+  // decisions to confirm recorded at review" - which reads as eight records this repo owes,
+  // on every run, in a report whose other numbers are exactly that. R7 says the opposite in
+  // as many words: which areas apply is a property of what is being built, so the rule
+  // "names no subset and asserts no count", and the validation suite's own assessment of
+  // five machine-learning repositories found none of them carrying the three areas most
+  // often assumed universal - none of them in breach. So the line says what the reader has
+  // to do instead of how many things there are to count.
   if ((manifest.decisions || []).length) {
-    note("decision", `${manifest.decisions.length} catalogued decisions to confirm recorded at review (judgment tier - see ${METHOD_DOC})`);
+    note("decision", `the decision catalog applies where it applies - confirm at review that every area this repo DOES decide is recorded, and that one it does not says so once (R7 names no subset and asserts no count - see ${METHOD_DOC})`);
+  }
+  // A decisions entry claiming `required` is a manifest asserting the subset R7 refuses to
+  // assert. Nothing reads the field there - `required` decides drift-vs-note for files and
+  // sections - so it could only ever be a claim about the standard that the standard denies.
+  // Refused loudly rather than ignored: the eight shipped entries carried it for four
+  // versions and the contradiction was found by reading, not by any check.
+  // Array.isArray, not `|| []`: a malformed `decisions` that is an object would make this
+  // loop throw, and a verifier that throws stops reporting the other sixty checks.
+  for (const d of Array.isArray(manifest.decisions) ? manifest.decisions : []) {
+    if (d?.required !== undefined) {
+      fail("decision", `the decisions entry "${d.id ?? "(no id)"}" declares required:${d.required} - a decision area cannot be required by the manifest (R7 names no subset and asserts no count; which areas apply is a property of what this repo is building). Drop the field: nothing reads it here, and an area that must be enforced is a guard, not a flag`);
+    }
   }
   // A recorded deviation that no longer deviates is stale bookkeeping: it reads as "this
   // repo chose otherwise" long after the repo chose otherwise back.
@@ -461,7 +838,7 @@ if (manifest) {
   // unaligned repos reported drift 4-5 here against drift 13-15 from the shipped manifest, in
   // the same output format, in the same minute. Anything that reads "the drift number is the
   // open delta" is false while this branch runs, so it has to say so where the number is.
-  warning("manifest", "no standard.manifest.json in this repo - measured against the built-in skeleton below, which is a fraction of the standard's entries. The number here is NOT the delta from the standard; run align-to-standards (or update-to-version) to get the manifest and a real one");
+  warning("manifest", "no standard.manifest.json in this repo - measured against the built-in skeleton below, which is a fraction of the standard's entries. The number here is NOT the delta from the standard; run align-to-standards (or update-to-latest) to get the manifest and a real one");
   for (const [p, why] of [
     ["AGENTS.md", "the single agent entry point"],
     ["specs", "living capability specs"],
@@ -486,13 +863,17 @@ if (manifest) {
   }
 }
 
-// 2b. surviving template placeholders - drift 0 with empty shells is a hollow win.
+// 2d. surviving template placeholders - drift 0 with empty shells is a hollow win.
 // A warning, never drift: substance stays the judgment tier's call.
+let hollow = false; // no capability spec here - what drift 0 does not say (2e below)
 if (!skeleton) {
-  // The three shapes the shipped templates actually use, and nothing wider:
-  //   {{NORTH_STAR}}   mustache, in PRODUCT
+  // The shapes the shipped templates actually use, and nothing wider:
+  //   {{NORTH_STAR}}   mustache, in PRODUCT and SECURITY
   //   <repo>, <team language>, <declare per artifact - default English>   angle, in prose
   //   | ... | ... |   a table row whose every cell is an ellipsis, in AGENTS.md/ARCHITECTURE.md
+  //   > **Template …  the "rewrite this and delete this note" banner, in PRINCIPLES
+  // The first and last are read from the raw file and the middle two after code spans are
+  // stripped; the split, and why, is at RAW_PLACEHOLDER_RE below.
   // `:` `/` `=` and a leading `/` stay out of the angle form, so markdown autolinks
   // (`<https://x>`), HTML attributes (`<img src="x">`) and closing tags (`</div>`) are not
   // placeholders. That was not enough on its own: `<picture>`, `<code>` and friends have the
@@ -508,7 +889,7 @@ if (!skeleton) {
   // The ellipsis-row form is the other shape a template leaves behind: "your rows go here"
   // in the shipped AGENTS.md and ARCHITECTURE.md, kept verbatim by a showcase repo's own entry
   // file and unnoticed by either alternative above. A row of EMPTY cells is deliberately not
-  // matched: an empty table is a legitimate steady state (no cycles in flight yet), and a
+  // matched: an empty table is a legitimate steady state (no sprints in flight yet), and a
   // warning that state cannot clear is one everybody learns to skip.
   const HTML_ELEMENTS = new Set(
     ("a abbr address area article aside audio b bdi bdo big blockquote body br button canvas caption center cite code col colgroup " +
@@ -519,10 +900,14 @@ if (!skeleton) {
       "title tr track u ul use var video wbr").split(" "),
   );
   const PLACEHOLDER_RE = /\{\{[^}\n]+\}\}|<(\p{L}[\p{L}\p{N} '._+-]{0,58})>|^\|(?:\s*(?:\.{3}|…)\s*\|)+\s*$/gmu;
-  const hasPlaceholder = (body) => {
-    for (const m of body.matchAll(PLACEHOLDER_RE)) {
+  // The same list without the angle form - for documents whose prose the standard does not
+  // own. Mustache and ellipsis rows are never anything else, so this half has no
+  // false-positive surface at all; see the record scan below for why that matters there.
+  const UNAMBIGUOUS_RE = /\{\{[^}\n]+\}\}|^\|(?:\s*(?:\.{3}|…)\s*\|)+\s*$/gm;
+  const hasPlaceholder = (body, re = PLACEHOLDER_RE) => {
+    for (const m of body.matchAll(re)) {
       const angle = m[1];
-      if (angle === undefined) return true; // the mustache and ellipsis-row forms are never anything else
+      if (angle === undefined) return true; // the ellipsis-row form is never anything else
       if (!/\s/.test(angle) && HTML_ELEMENTS.has(angle.toLowerCase())) continue;
       return true;
     }
@@ -538,12 +923,268 @@ if (!skeleton) {
   // The cost is a real placeholder written inside backticks going unseen. That is why the
   // shipped templates put fill markers in prose and keep code formatting for notation; the
   // convention is what makes the check precise, not the regex alone.
-  const stripCode = (s) => s.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, "").replace(/`[^`\n]*`/g, "");
+  //
+  // Markdown has four code forms and this used to strip two. The other two are what a
+  // document written before fenced blocks existed actually uses, and both were found on
+  // real repositories the standard never wrote:
+  //   - a code span that WRAPS A LINE BREAK. git/git's README.md:26-27 reads
+  //     "`man git-<commandname>` or `git help\n<commandname>`" - the span crosses the line
+  //     end, the old `[^`\n]*` refused to cross it, and the leftover `<commandname>` on the
+  //     next line was read as a placeholder. A span may now contain newlines but never a
+  //     BLANK line, so an unmatched backtick cannot swallow the rest of the file.
+  //     The delimiter is a RUN of backticks matched by its own length, which is what
+  //     markdown says and what keeps the pairing local: with a single-backtick pattern, a
+  //     `` `x` `` span (the form used to show a backtick) left an odd backtick behind and
+  //     every span after it paired one position out - which, once spans could cross lines,
+  //     exposed the notation on the following lines instead of stripping it.
+  //   - an INDENTED code block (four spaces or a tab, the pre-fence form). vim/vim's own
+  //     AGENTS.md:92 carries `Signed-off-by: Author Name <email>` inside one.
+  // A four-space indent under a list item is a continuation paragraph rather than code, so
+  // the run is only stripped when the line introducing it is not a list item - otherwise a
+  // real placeholder in a nested bullet would go unseen, which is the failure this check
+  // exists to prevent, in the other direction.
+  const stripIndentedBlocks = (s) => {
+    const out = [];
+    let prevNonBlank = "";
+    let afterBlank = true; // start of file behaves like the line after a blank one
+    let inBlock = false;
+    for (const line of s.split("\n")) {
+      const blank = !line.trim();
+      const indented = /^(?: {4,}|\t)/.test(line);
+      if (inBlock) {
+        if (blank || indented) {
+          out.push(blank ? line : "");
+          continue;
+        }
+        inBlock = false;
+      }
+      if (!blank && indented && afterBlank && !/^\s*(?:[-*+]|\d+[.)])\s/.test(prevNonBlank)) {
+        inBlock = true;
+        out.push("");
+        continue;
+      }
+      out.push(line);
+      afterBlank = blank;
+      if (!blank) prevNonBlank = line;
+    }
+    return out.join("\n");
+  };
+  // `\r` is in the blank-line class on purpose: a CRLF checkout writes "\r\n\r\n" between
+  // paragraphs, and without it an unmatched backtick in such a file would still cross one.
+  const stripSpans = (s) =>
+    s.replace(/(`+)([\s\S]*?)\1/g, (whole, _delim, inner) => (/\n[ \t\r]*\n/.test(inner) ? whole : ""));
+  const stripCode = (s) => stripSpans(stripIndentedBlocks(s.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, "")));
 
-  for (const p of ["AGENTS.md", "README.md", "SECURITY.md", "docs/PRINCIPLES.md", "docs/PRODUCT.md", "docs/ARCHITECTURE.md", "docs/personas.md", "docs/backlog.md"]) {
-    if (!exists(p)) continue;
-    const body = stripCode(readFileSync(p, "utf8"));
-    if (hasPlaceholder(body)) warning("fill", `${p} still carries template placeholders - filled shells, not copied ones, are the point`);
+  // Decision records are in scope too, and they are found by the record filename pattern
+  // rather than a fixed path, because their directory layout is the repo's choice (the
+  // shipped adr/ + bdr/ split, or one flat folder). The record templates' `| **Author** |
+  // {{AUTHOR}} |` row is the placeholder this list previously could not see at all: no
+  // generator fills it, and every record ever written carried it to drift 0. The pattern
+  // excludes `_template.md` and the stream READMEs for free - a template is supposed to hold
+  // placeholders, and warning about it is how a warning gets ignored.
+  //
+  // Records are scanned with UNAMBIGUOUS_RE, not the full pattern, and that is deliberate.
+  // The eight documents above are shells this standard wrote, so its "angle brackets in prose
+  // mean replace me" convention governs them. A record is the repo's own writing, and records
+  // quote paths and agent utterances in prose: measured against this project's own 33 records,
+  // the angle form fires on 2 of them - `<standard>@<version>` and `<technology>` inside
+  // quoted example dialogue - neither an unfilled anything. The cost is that an unfilled
+  // `<short title of the decision>` in a record heading goes unwarned here; that one is
+  // visible in the filename and in the index row, while the author row is the one that
+  // survives unnoticed.
+  //
+  // Directory entries, never stat: an entry is recursed into only when it IS a directory, so
+  // a symlink is a leaf here and a link loop cannot hang the check. An unreadable or absent
+  // directory is not this check's business - the files[] entry above owns whether it must exist.
+  const recordFiles = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+    const out = [];
+    for (const e of entries) {
+      if (e.isDirectory()) out.push(...recordFiles(`${dir}/${e.name}`));
+      else if (/^(?:ADR|BDR)-\d+-.+\.md$/.test(e.name)) out.push(`${dir}/${e.name}`);
+    }
+    return out;
+  };
+
+  // The list is derived from the manifest, not written here. A hardcoded list of eight is a
+  // second source of truth that silently stops covering what the manifest adds: CONTRIBUTING.md
+  // is a fill-from-repo entry and was never on it, so a two-line stub of it was checked by
+  // nothing at all. Directory entries are skipped - there is no single body to read.
+  const isDir = (p) => {
+    try {
+      return statSync(p).isDirectory();
+    } catch {
+      return false;
+    }
+  };
+  const fillFiles = (manifest?.files || [])
+    .filter((f) => f.adapt === "fill-from-repo")
+    .map((f) => [f.path, ...(f.altPaths || [])].find((x) => exists(x) && !isDir(x)))
+    .filter(Boolean);
+  // The original eight stay as a floor rather than being replaced by the derived set. Without
+  // a manifest there is nothing to derive from - the skeleton fallback - and dropping to the
+  // derived set alone would have quietly stopped scanning SECURITY.md, PRODUCT, ARCHITECTURE
+  // and the roster on exactly the repos least likely to have filled them in.
+  const FLOOR = ["AGENTS.md", "README.md", "SECURITY.md", "docs/PRINCIPLES.md", "docs/PRODUCT.md", "docs/ARCHITECTURE.md", "docs/personas.md", "docs/backlog.md"];
+  const fillPaths = [...new Set([...fillFiles, ...FLOOR].filter((p) => exists(p) && !isDir(p)))];
+
+  // A stub the adopter wrote themselves carries no template placeholder, so the check above
+  // cannot see it. Six files reading "# Title\n\nTODO." moved a sparse repo from 21% to 37%
+  // adopted with its real substance unchanged, because a fill-from-repo entry scores on
+  // existence alone and by construction cannot be hashed - the adopter writes the content.
+  //
+  // What is detected is "visibly nothing written", not "not enough written". Anything else
+  // would be measuring prose by the yard: a genuine two-sentence SECURITY.md naming an address
+  // and a response time is complete, and a length threshold that failed it while passing a
+  // padded one would teach adopters to pad. So: a body with no content beyond its headings, or
+  // whose only content is a marker meaning nobody has written this yet. Both are unambiguous,
+  // and both are cleared by writing one real sentence - which is the whole ask.
+  //
+  // Still a warning, never drift. Whether what IS written is any good stays the judgment tier's
+  // call (ADR-038), and the adopted percentage counts entries present, not substance present.
+  const NOTHING_YET = /^(?:to\s?do|todo|tbd|t\.b\.d\.?|fixme|xxx|n\/?a|none|coming soon|to be (?:written|filled|done|completed)|fill (?:me )?in|placeholder|wip|work in progress)\b[\s.!:;-]*$/i;
+  // Deliberately does NOT strip code. That strip exists for the placeholder check, where the
+  // question is notation-versus-prose; here the question is whether anything was written at
+  // all, and a SECURITY.md whose whole body is the command to file an advisory has told the
+  // reader what to do. Stripping it warned on that file, which is a false positive on a
+  // warning - and a warning that fires on a finished file is one everybody learns to skip.
+  const proseOf = (raw) =>
+    raw
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .split("\n")
+      .filter((l) => !/^\s*#{1,6}\s/.test(l))
+      .join("\n")
+      .replace(/^\s*[-*+]\s+/gm, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  // Two forms are read from the RAW body instead, because stripping was silently passing the
+  // files the check exists for: the shipped SECURITY.md writes `{{SECURITY_CONTACT}}` inside
+  // backticks and docs/personas.md wrote its roster marker the same way, so a fake security
+  // contact and an empty persona roster both reached drift 0 with nothing said.
+  //
+  //   {{UPPER_SNAKE}}   a fill marker and nothing else, wherever it is written. Restricted to
+  //                     that shape on purpose: `${{ github.token }}` and `{{ user.name }}` are
+  //                     real content in a filled repo's README, and neither starts with a
+  //                     capital or stays inside [A-Z0-9_].
+  //   > **Template …    the banner a shipped template puts at the top of itself, telling the
+  //                     reader to rewrite the file and delete the note. docs/PRINCIPLES.md
+  //                     carries no marker of any other form, so nothing at all fired on it -
+  //                     while its own banner says shipping it unread adopts commitments
+  //                     nobody agreed to. Deleting the note, as it instructs, clears this.
+  const RAW_PLACEHOLDER_RE = /\{\{[A-Z][A-Z0-9_]*\}\}|^>\s*\*\*Template\b/m;
+
+  for (const p of fillPaths) {
+    const raw = readFileSync(p, "utf8");
+    if (RAW_PLACEHOLDER_RE.test(raw) || hasPlaceholder(stripCode(raw))) {
+      warning("fill", `${p} still carries template placeholders - filled shells, not copied ones, are the point`);
+      continue;
+    }
+    const prose = proseOf(raw);
+    if (!prose) {
+      warning("fill", `${p} has no content beyond its headings - it counts as present, and presence is not substance`);
+    } else if (NOTHING_YET.test(prose)) {
+      warning("fill", `${p} says only "${prose.slice(0, 40)}" - it counts as present, and presence is not substance`);
+    }
+  }
+
+  // Records carry prose the standard did not write, so they are scanned for the unambiguous
+  // shapes only, and for placeholders alone - a record's substance is what it decided, which
+  // no pattern here can weigh.
+  for (const p of recordFiles("docs/decision-records")) {
+    const raw = readFileSync(p, "utf8");
+    if (RAW_PLACEHOLDER_RE.test(raw) || hasPlaceholder(stripCode(raw), UNAMBIGUOUS_RE))
+      warning("fill", `${p} still carries template placeholders - filled shells, not copied ones, are the point`);
+  }
+
+  // 2e. drift 0 on a repo that has specified nothing.
+  // Measured on a raw greenfield tree: three declarative files - `.standards-version`, a
+  // `profile` key, and an empty `specs/capability-map.json` - walked it from drift 3 to
+  // `OK - drift 0 - 100% adopted (69/69) - compliant with the standard`, with not one
+  // capability spec written and every shipped template still a shell. The number was not
+  // wrong; every manifest entry really was met. The sentence was. "Compliant" reads as "the
+  // method has been used here", and what had been measured was that the folders are in the
+  // right places.
+  //
+  // Reported, never scored, and that distinction is the whole design. The greenfield walk
+  // scaffolds the repo in step 1 and writes the first spec in step 6, and step 1 promises
+  // "Empty but valid: self-verify passes". Making the absence drift would put drift 0 out of
+  // reach of an honest brand-new repo for the entire length of the interview, and a failure
+  // nobody can clear is one everybody learns to route around - the same reason the
+  // placeholder scan above warns rather than counting. Substance stays the judgment tier's
+  // call; what changes is that the verdict stops claiming more than it checked.
+  const specWalk = (dir, depth, acc) => {
+    if (depth < 0) return acc;
+    let entries = [];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return acc; // no specs/ at all - the files check reports that; here it just means none
+    }
+    for (const e of entries) {
+      const p = `${dir}/${e}`;
+      let isDir = false;
+      try {
+        isDir = statSync(p).isDirectory();
+      } catch {
+        continue; // a broken symlink specifies nothing
+      }
+      if (isDir) specWalk(p, depth - 1, acc);
+      else acc.push(p);
+    }
+    return acc;
+  };
+  // The same shape spec-structure.mjs holds a capability spec to: specs/<capability>/<file>.md.
+  // Templates, READMEs and the spec engine's ephemeral plan/tasks artifacts (ADR-010) are not
+  // specified behaviour and must not read as any.
+  const capabilitySpecs = specWalk("specs", 3, []).filter(
+    (f) =>
+      f.split("/").length >= 3 &&
+      f.endsWith(".md") &&
+      !f.includes(".template.") &&
+      !/\/readme\.md$/i.test(f) &&
+      !(/\/(?:plan|tasks)\.md$/.test(f) || f.includes("/checklists/")),
+  );
+  if (!capabilitySpecs.length) {
+    hollow = true;
+    warning("spec", 'no capability spec exists here yet (specs/<capability>/spec.md) - drift measures the manifest, so it reaches 0 on a repo that has specified no behaviour at all; the shape is right, which is not the same claim as "the method has been used here"');
+  }
+}
+
+// 2c. a committed dependency tree ------------------------------------------------
+// Version-control hygiene the rest of the machine silently assumes: the coupling guard's
+// globs are matched against whatever git reports as changed, so with a dependency tree
+// tracked, a `**/`-prefixed capability glob matches paths inside it and a dependency bump
+// trips a blocking gate for a capability nobody touched. spec-guard now ignores those paths;
+// this says why they are there, because the repo is the thing that needs fixing.
+//
+// A warning, not drift: drift counts unmet MANIFEST entries (ADR-005), and no entry declares
+// this. Naming it is what a later decision to make it cost something would be built on.
+if (!skeleton) {
+  try {
+    // The pathspec is the cheap pre-filter (git's default `*` crosses `/`, so this reaches a
+    // workspace's nested trees too); the segment test after it is what makes the answer exact,
+    // so a directory merely named `my_node_modules` is not reported. maxBuffer is raised for
+    // the case this check exists for: a committed dependency tree is a lot of paths, and the
+    // default would turn the loudest instance into the silent one.
+    const tracked = execSync('git ls-files -- "*node_modules/*"', {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .split("\n")
+      .filter((f) => f.split("/").includes("node_modules"));
+    if (tracked.length) {
+      const ignored = exists(".gitignore") ? "" : " - and this repo has no .gitignore at all";
+      warning("vcs", `${tracked.length} file(s) under node_modules/ are tracked in git${ignored}: a committed dependency tree is what a capability glob matches by accident`);
+    }
+  } catch {
+    /* no git, or nothing matched - nothing to report */
   }
 }
 
@@ -564,7 +1205,7 @@ const failed = results.filter((r) => !r.ok);
 const drift = failed.length; // one unmet required entry = one point of drift
 console.log(`\nself-verify - compliance with ${manifest ? `manifest ${manifest.version}` : "the BUILT-IN SKELETON (no standard.manifest.json here)"}\n`);
 for (const r of results) {
-  const tag = !r.ok ? "FAIL" : r.isWarning ? "WARN" : r.dim ? "····" : "PASS";
+  const tag = !r.ok ? "FAIL" : r.isWarning ? "WARN" : r.isUnrun ? "SKIP" : r.dim ? "····" : "PASS";
   // padEnd(9) leaves no gap after a 9-character name, so `reference` ran into its own
   // count: "reference9 method docs". One more column, and the separator is unconditional.
   console.log(`  ${tag}  ${r.name.padEnd(10)} ${r.msg}`);
@@ -596,9 +1237,39 @@ const scope = manifest
   ? ""
   : ` - AGAINST THE BUILT-IN ${applicable}-CHECK SKELETON, NOT A MANIFEST: this repo carries no standard.manifest.json, so the real distance from the standard is larger and is not measured here`;
 
+// A check that could not run is absent from BOTH numbers - it is not drift and it is not
+// adoption - so the verdict has to carry it or it is absent from the report entirely, which
+// is how "we ran the gate" and "the gate ran" quietly become different statements.
+const notRun = results.filter((r) => r.isUnrun);
+const notRunNote = notRun.length
+  ? ` - ${notRun.length} CHECK${notRun.length === 1 ? "" : "S"} NOT RUN HERE (${notRun.map((r) => r.id).join(", ")}): a missing prerequisite, counted as neither drift nor adoption, so this verdict covers less than the manifest does`
+  : "";
+// The claim the drift-0 line makes is about the repo's SHAPE. On a repo with no capability
+// spec that is the entire claim, and printing it unqualified is how "compliant" came to read
+// as "the method has been used here".
+const hollowNote = hollow
+  ? " - AND THAT IS THE WHOLE CLAIM: no capability spec exists here yet, so this says the repo is shaped like the standard, not that any behaviour has been specified under it"
+  : "";
+
+// The percentage is structural. A `fill-from-repo` entry is content the adopter writes, so
+// there is nothing to compare it against and it scores on presence: six files reading
+// "# Title / TODO." moved a sparse repo from 21% to 37% adopted with its substance unchanged.
+// Saying so where the number is printed is the honest fix; scoring prose mechanically would
+// turn substance into ceremony (ADR-038). The fill warnings above name the ones that read as
+// empty, and whether the rest say anything worth saying is reviewed at PR.
+const fillWarnings = results.filter((r) => r.isWarning && r.name === "fill").length;
+const substance = fillWarnings
+  ? ` - ${fillWarnings} authored file${fillWarnings === 1 ? "" : "s"} flagged above as unfilled or empty: this percentage counts entries present, not substance written`
+  : "";
+
+// `OK` is reserved for a run that actually performed every check it was asked to. Drift 0
+// with a blocking guard that never started is a true statement about a smaller question, and
+// the word a reader skims must not say otherwise: this loosened the gate (a missing tool used
+// to exit 1, and now does not), so what stops a skipped check reading as a clean bill of
+// health is the wording and the count, not the exit code.
 if (drift === 0) {
-  console.log(`self-verify: OK - drift 0 - ${pct}% adopted (${adopted}/${applicable}), ${exceptedNote} - ${manifest ? "compliant with the standard" : "every skeleton check met"}${scope}\n`);
+  console.log(`self-verify: ${notRun.length ? "" : "OK - "}drift 0 - ${pct}% adopted (${adopted}/${applicable}), ${exceptedNote} - ${manifest ? "compliant with the standard" : "every skeleton check met"}${scope}${notRunNote}${substance}${hollowNote}\n`);
   process.exit(0);
 }
-console.error(`self-verify: drift ${drift} - ${pct}% adopted (${adopted}/${applicable}), ${exceptedNote} - ${drift} required entr${drift === 1 ? "y is" : "ies are"} unmet${scope}\n`);
+console.error(`self-verify: drift ${drift} - ${pct}% adopted (${adopted}/${applicable}), ${exceptedNote} - ${drift} required entr${drift === 1 ? "y is" : "ies are"} unmet${scope}${notRunNote}${substance}\n`);
 process.exit(warn ? 0 : 1);
