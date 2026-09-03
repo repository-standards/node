@@ -34,6 +34,14 @@ and what each check actually needs to run.
 - **`requiredKeys`** - what a `merge`-class entry must still contain after an adopter merges
   it into their own file. Presence is worthless for an entry whose whole point is a block
   inside a file the adopter also edits.
+- **Provenance is per layer** - the adopter's copy of this manifest records which commit of
+  this repository it came from, and the core's manifest records the same for the core. A stack
+  is linked by a registry pointer rather than a version range, so the two advance on separate
+  clocks and neither commit can be derived from the other.
+- **Required is about the check, not the calendar** - an entry marked required counts as drift
+  while it is absent, which is what makes a half-finished migration visible; an entry marked
+  optional is one the decision behind it can be satisfied without, at a path this schema cannot
+  name.
 - **The guard** - a live command whose verdict is part of the drift number, as distinct from a
   declarative entry describing layout.
 
@@ -45,6 +53,7 @@ and what each check actually needs to run.
 |---|---|---|
 | `technology` | string | the single technology this stack covers; one stack per technology is policy |
 | `version` | string | this stack's own version, independent of the core's |
+| `provenanceCommit` | string \| null | the commit of THIS repository an adopter's copy last aligned to; ships `null` and is written into the adopter's copy by the run that applies or updates the layer. What an update's delta is computed from - `version` names the release, this names the tree |
 | `registry` | string | back-pointer to the core's `stacks.json`, which is what confers official status |
 | `files` | array | entries in the core manifest's file-entry schema (`path`, `adapt`, `required`, `purpose`, and `requiredKeys` where the entry is a merge) |
 | `guards` | array | entries in the core manifest's guard schema (`id`, `run`) |
@@ -74,6 +83,14 @@ behind the one-drift-number promise in Success metric above.
 - A guard's failure is drift. It cannot be waived by a manifest exception - waiving a live
   check removes it rather than recording a deviation from it.
 - The manifest carries no version range against the core.
+- `provenanceCommit` ships `null` and is never a commit of the core repository. A release
+  that changes shipped content is what makes a recorded commit stale; nothing in this
+  repository rewrites an adopter's copy.
+- An entry is `required` only where its absence is itself the deviation. Where a decision can
+  be satisfied at a path the schema cannot express - one config per workspace package rather
+  than one at the root - the entry is optional, because a required entry there manufactures
+  drift for a repository that did nothing wrong, and an exception recording it buries the
+  cases that mean something.
 
 ## Acceptance criteria
 
@@ -84,6 +101,12 @@ behind the one-drift-number promise in Success metric above.
   passing on the file's existence.
 - Given a manifest exception targeting a guard, when the verifier runs, then the exception is
   rejected as drift rather than silently honoured.
+- Given an adopting repository whose copy of this manifest records a `provenanceCommit`, when
+  the next update of this layer runs, then the delta is computed from that commit and every
+  entry is enumerated, rather than from the version string with the `merge` entries unlisted.
+- Given a workspace that configures the test tiers in each package and carries no root
+  `vitest.config.ts`, when the verifier runs, then that entry is reported as an unmet optional
+  rather than as drift, and the repository records no exception for it.
 
 ## Open questions
 

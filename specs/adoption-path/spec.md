@@ -54,6 +54,12 @@ brownfield, and what happens after each.
   and brownfield walks.
 - Package-manager migration covers the routes a real repository arrives on, and says plainly
   where a route does not exist rather than implying one does.
+- The run ends by recording where the copy came from: this repository's commit, written into
+  the adopting repository's copy of the stack manifest. A path that is walked but not recorded
+  cannot be walked again from where it stopped.
+- An entry the repository is part-way to is recorded as an exception naming the step, and the
+  note says when the exception comes out. A migration with two steps has a state between them,
+  and that state is the exception rather than a silent absence.
 
 ## Open questions
 
