@@ -12,6 +12,33 @@ exists to make unnecessary.
 
 ## Unreleased
 
+### An adopter's copy of this manifest says which tree it came from (2026-09-04)
+
+`stack.manifest.json` gains `provenanceCommit`, shipping `null`, written into the adopting
+repository's copy by the run that applies or updates this layer. The core's manifest has
+carried the equivalent since standard ADR-052, and the difference showed the first time a real
+repository updated: the core half of the delta is an exact diff between two commits, while the
+stack half had a version string and nothing else to compare. Most entries here are `merge`
+class and carry no hash, so that half was not merely coarse - it was unenumerated, and a
+release's additions could go unapplied with the drift number still reading zero. The two
+layers advance on separate clocks, so the field records a commit of this repository and never
+one of the core's.
+
+`vitest.config.ts` becomes optional. The requirement behind it is the tier split, not the
+path: a workspace whose packages each configure the tiers satisfies DECISIONS#9 where the
+tests actually run, and a root projects config on top of those runs every suite twice. Marked
+required, the entry manufactured drift for a repository that had done nothing wrong, and the
+exception recording it sat beside the exceptions that mean something. What the schema cannot
+yet say - this path, or one per workspace package - is the core's to fix, and it is filed as
+SELF-11 rather than papered over here.
+
+`biome.json` deliberately stays required. The adaptation path prescribes a two-step Biome
+migration, so a repository following it correctly has no `biome.json` between the steps -
+which is a real, unfinished deviation from DECISIONS#3 and should read as one. `ADAPTING.md`
+now gives the exception to record, with the migration step in its reason, and says it comes
+out when step 2 lands. That is the difference between the two entries: one is a decision
+satisfied elsewhere, the other is a decision not yet taken.
+
 ### The stack layer became an adopter of the standard it belongs to (2026-08-06)
 
 This repository carried a `stack.manifest.json` and nothing else the core standard asks for.

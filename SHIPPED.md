@@ -9,13 +9,18 @@ decision; changing it is deviating, and deviating is fine if you record it. **Me
 yours** means the substance is a block inside the file, not the whole file: your globs,
 your job names, your paths stay yours.
 
+**Required** means the verifier counts its absence as drift - not that you must take it
+today. A repository part-way through one of the migrations in [adapting](ADAPTING.md)
+records the entry as an exception naming the step it is on, and deletes the exception when
+the step lands; that is the migration's visible state, not a way around the check.
+
 | Path | What it is | How to take it |
 |---|---|---|
 | `.nvmrc` | the Node version pin - one runtime, no drift between machines | copy as-is &middot; required |
 | `biome.json` | lint + format, one tool - the reference copy encodes the strictness the picks assume | merge into yours &middot; required |
 | `tsconfig.base.json` | strict TypeScript base every package extends | merge into yours &middot; required |
 | `pnpm-workspace.yaml` | workspace globs + the supply-chain policy (release-age cooldown, allowed build scripts, save-exact) - the policy block is the point | merge into yours &middot; required |
-| `vitest.config.ts` | unit and integration tiers as separate Vitest projects | merge into yours &middot; required |
+| `vitest.config.ts` | unit and integration tiers as separate Vitest projects - a workspace may configure them per package instead | merge into yours &middot; optional |
 | `playwright.config.ts` | the e2e tier - real browser journeys against the running app | merge into yours &middot; optional |
 | `docker-compose.test.yml` | ephemeral real dependencies for integration/e2e - not mocks | copy as-is &middot; optional |
 | `perf/` | local Lighthouse perf-budget runner - report-only, committed baseline + dated history, no external upload; edit config.mjs routes | copy as-is &middot; optional |

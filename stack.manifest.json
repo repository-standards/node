@@ -1,7 +1,8 @@
 {
-  "$about": "The stack contract and manifest in one (ADR-016 in the core repo): the same schema (files/guards, adapt classes, per-entry rule anchors - here DECISIONS#N instead of R#) the core's standard.manifest.json uses, so the align engine and self-verify read it whole. Paths are the adopted repo's; the reference copy of every merge-class file lives in starter/. An adopting repo carries this file beside standard.manifest.json; self-verify then counts one drift across both layers. The registry pointer is the linkage to the core - discovery metadata, never a version requirement (core ADR-022).",
+  "$about": "The stack contract and manifest in one (ADR-016 in the core repo): the same schema (files/guards, adapt classes, per-entry rule anchors - here DECISIONS#N instead of R#) the core's standard.manifest.json uses, so the align engine and self-verify read it whole. Paths are the adopted repo's; the reference copy of every merge-class file lives in starter/. An adopting repo carries this file beside standard.manifest.json; self-verify then counts one drift across both layers. The registry pointer is the linkage to the core - discovery metadata, never a version requirement (standard ADR-022). `provenanceCommit` is the full commit SHA of THIS repository that an adopter's copy last aligned to: it ships `null`, and the run that applies or updates this layer writes it into the adopter's copy. It is what the stack half of an update's delta is computed from, the way the core manifest's own field is (standard ADR-052); `version` stays the human-facing bookmark. The two layers are independent - a stack rides its own clock (standard ADR-022) - so this field records a commit here, never one in the core repository.",
   "technology": "node",
   "version": "0.3.1",
+  "provenanceCommit": null,
   "description": "Node/TypeScript best practices - Next.js + Fastify through one proxy, Better Auth, tiered testing; distilled from production repos and boot-verified",
   "registry": "repository-standards/core",
   "files": [
@@ -44,9 +45,9 @@
     },
     {
       "path": "vitest.config.ts",
-      "purpose": "unit and integration tiers as separate Vitest projects",
+      "purpose": "unit and integration tiers as separate Vitest projects - the tiers are the requirement, not the path: a workspace whose packages each configure them satisfies it there, and a root projects config on top of those runs every suite twice, so this entry is optional rather than drift for that shape",
       "adapt": "merge",
-      "required": true,
+      "required": false,
       "profile": "core",
       "rule": "DECISIONS#9"
     },
