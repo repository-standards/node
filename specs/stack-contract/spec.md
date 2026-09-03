@@ -112,9 +112,9 @@ behind the one-drift-number promise in Success metric above.
 
 - **This repository cannot satisfy its own stack manifest, and that is not yet decided
   either way.** The entries describe a repository that *consumes* the stack - `biome.json`,
-  `tsconfig.base.json`, `pnpm-workspace.yaml` and `vitest.config.ts` at the repository root -
-  while this repository *publishes* it and ships those files inside
-  [`starter/`](../../starter). Measured: with both manifests present, the four entries fail
+  `tsconfig.base.json` and `pnpm-workspace.yaml` at the repository root - while this
+  repository *publishes* it and ships those files inside
+  [`starter/`](../../starter). Measured: with both manifests present, the three entries fail
   and the `stack-check-all` guard fails with `ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND`, because
   the guard runs `pnpm check:all` at a root that has no `package.json`. The manifest schema
   has no notion of publisher versus consumer, and the guard cannot be excepted by design. The

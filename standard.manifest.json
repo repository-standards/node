@@ -1045,11 +1045,6 @@
       "kind": "file",
       "match": "pnpm-workspace.yaml",
       "reason": "this repo publishes the node stack rather than consuming it; the real copy ships from starter/pnpm-workspace.yaml (SELF-1). Declared here, not in stack.manifest.json, for the same reason as biome.json above"
-    },
-    {
-      "kind": "file",
-      "match": "vitest.config.ts",
-      "reason": "this repo publishes the node stack rather than consuming it; the real copy ships from starter/vitest.config.ts (SELF-1). Declared here, not in stack.manifest.json, for the same reason as biome.json above"
     }
   ]
 }
