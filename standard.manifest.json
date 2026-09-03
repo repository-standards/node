@@ -1030,5 +1030,26 @@
       "note": "renamed to .claude/skills/update-to-latest - the target was always latest, never a pin (ADR-025/052); nothing to migrate, the replacement ships in the same release"
     }
   ],
-  "exceptions": []
+  "exceptions": [
+    {
+      "kind": "file",
+      "match": "biome.json",
+      "reason": "this repo publishes the node stack rather than consuming it; the real copy ships from starter/biome.json (SELF-1). Declared here, not in stack.manifest.json, because that file is copied verbatim into every adopter of the node stack - an exception living there would silently waive the requirement for them too"
+    },
+    {
+      "kind": "file",
+      "match": "tsconfig.base.json",
+      "reason": "this repo publishes the node stack rather than consuming it; the real copy ships from starter/tsconfig.base.json (SELF-1). Declared here, not in stack.manifest.json, for the same reason as biome.json above"
+    },
+    {
+      "kind": "file",
+      "match": "pnpm-workspace.yaml",
+      "reason": "this repo publishes the node stack rather than consuming it; the real copy ships from starter/pnpm-workspace.yaml (SELF-1). Declared here, not in stack.manifest.json, for the same reason as biome.json above"
+    },
+    {
+      "kind": "file",
+      "match": "vitest.config.ts",
+      "reason": "this repo publishes the node stack rather than consuming it; the real copy ships from starter/vitest.config.ts (SELF-1). Declared here, not in stack.manifest.json, for the same reason as biome.json above"
+    }
+  ]
 }

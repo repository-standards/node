@@ -82,3 +82,18 @@ nine tasks stand between here and full alignment, all recorded with an owner rol
 
 `self-verify.mjs` now reports `drift 4 - 96% adopted (88/92), 0 excepted`, every point of it
 tracing to `SELF-1`.
+
+### SELF-1 closed: the four file entries are excepted, not failed (2026-09-03)
+
+`SELF-1`'s premise had two halves: four required files this repository ships from `starter/`
+rather than its own root, and the `stack-check-all` guard, which a manifest exception cannot
+waive by design. `SELF-7` already closed the second half - a missing toolchain now reads as a
+skip, not drift - which left only the first half, and the schema already had a mechanism for
+it: `biome.json`, `tsconfig.base.json`, `pnpm-workspace.yaml` and `vitest.config.ts` are now
+excepted with `kind: "file"`, each naming the `starter/` path where the real copy lives. The
+exceptions live in `standard.manifest.json`, not `stack.manifest.json` - the latter is copied
+verbatim into every adopter of the node stack during onboarding, so an exception recorded
+there would silently waive the requirement for real consumers too; `standard.manifest.json`
+is this repo's own compliance copy and is never redistributed. None of the four options
+`SELF-1` weighed were needed. `self-verify` reports `drift 0 - 96% adopted (88/92), 4
+excepted - compliant with the standard`.
