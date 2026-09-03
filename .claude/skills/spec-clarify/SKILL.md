@@ -4,8 +4,17 @@ description: Use right after a spec is drafted, or whenever one still has open q
 ---
 
 <!-- Vendored from github/spec-kit v0.13.2 (MIT - scripts/spec/LICENSE). PATCHED(repository-standards) hunks are marked inline; CHERRY-PICKED hunks name the upstream commit they came from. -->
+<!-- PATCHED(repository-standards): em and en dashes normalised to ASCII hyphens throughout.
+     standard/docs/conventions.md forbids them, and this file ships into every adopting repo,
+     so the vendored punctuation would have carried a rule break into each one. Prose only -
+     no instruction, path or example changed. Enforced by tools/prose-check.mjs. -->
+<!-- PATCHED(repository-standards): ADR-033 - records outrank the dossier and the user; the
+     dossier was documented as the sole pre-user answer source, so a question a decision had
+     already settled was asked anyway, and whatever the user said that day won -->
+**Records first, then discovery, then the user.** Before the dossier and before any question, read `docs/decision-records/`'s index and open in full only the records whose subject overlaps this spec - and where `decision-records-check` is not running to prove the index lists everything on disk, list the directory too. An **Accepted** record in scope has already answered: write its answer into the spec citing it (`per ADR-0NN`), and do not ask. `Proposed` / `Rejected` / `Superseded` bind nothing - follow the supersession link to the record that is current.
+
 <!-- PATCHED(repository-standards): ADR-024 - the dossier answers before the user does -->
-**Discovery first, the user second.** Before asking the user anything, check `docs/discovery/` for the topic's dossier. Answers may already be there: use entries **newer** than the dossier README's `Last reconciled:` stamp (plus entries still `new`/`open`) as an answer source, and record their provenance in `## Clarifications` ("per discovery/<topic>/<entry>"). Never re-ask what an entry marked `folded-into-spec` or `superseded-by:` already settled, and never treat a dossier-vs-spec difference as a question - a dossier is not normative; the spec has already won. The marker family is wider than questions: `NEEDS DECISION` / `NEEDS INPUT` / `NEEDS ASSET` markers are not clarify questions - report them as the outstanding gap list (what is missing, who brings it) and leave them open until the decision/input/asset lands. When this loop folds dossier material into the spec, mark those entries and update the stamp.
+**Discovery second.** Before asking the user anything, check `docs/discovery/` for the topic's dossier. Answers may already be there: use entries **newer** than the dossier README's `Last reconciled:` stamp (plus entries still `new`/`open`) as an answer source, and record their provenance in `## Clarifications` ("per discovery/<topic>/<entry>"). Never re-ask what an entry marked `folded-into-spec` or `superseded-by:` already settled, and never treat a dossier-vs-spec difference as a question - a dossier is not normative; the spec has already won. The marker family is wider than questions: `NEEDS DECISION` / `NEEDS INPUT` / `NEEDS ASSET` markers are not clarify questions - report them as the outstanding gap list (what is missing, who brings it) and leave them open until the decision/input/asset lands. When this loop folds dossier material into the spec, mark those entries and update the stamp.
 
 ## User Input
 
@@ -118,56 +127,50 @@ Execution steps:
       A question the user cannot tell the point of costs more than it buys.
     - Rank by (Impact x Uncertainty). Prefer the question whose answer unblocks a whole section
       over three that each polish one line.
-    - Exclude anything already answered in the spec, in `## Clarifications`, or in the discovery
-      dossier.
+    - Exclude anything already answered in the spec, in `## Clarifications`, in an Accepted
+      decision record, or in the discovery dossier.
 
 5. Ask, in rounds, and **stop on coverage rather than on a number**:
-    - **Batch by contract, not one question per message forever.** Questions that belong to the
-      same contract are one conversation - a field's name, type and nullability get asked
-      together, in one message, numbered. Unrelated questions stay separate. Asking six things
-      about one table across six messages is not thoroughness, it is a worse interface.
-    - Keep a round to roughly **five messages**, then **check in**: say how many open items
-      remain and what they block, and offer three ways forward - keep going, park the rest as
-      markers, or park a named subset. Parking is safe *because* it writes markers, and the gate
-      then refuses to plan. Say that when offering it.
+    <!-- PATCHED(repository-standards): upstream renders its questions into the chat as markdown -
+         a bolded question, a lettered option table, "reply with the option letter". That is a
+         question-shaped paragraph: it does not block, the answer arrives as free text, and
+         nothing downstream can tell it happened - the guard looks for a tool call and so does
+         the replay layer. Measured on the shipped tree this skill made zero AskUserQuestion
+         calls while the standard advertised guided spec writing as its flagship flow. -->
+    - **Ask with `AskUserQuestion`. Every question, without exception.** Never render a question
+      as chat markdown, never ask for a reply by letter. [`questions.md`](questions.md) carries
+      the call sites this skill owns, their point ids and the shape every call takes - read it
+      here, in the loop, not as an appendix.
+    - **Batch by contract - up to four questions in one call.** A field's name, type and
+      nullability get asked together; unrelated questions go in separate calls. Six calls about
+      one table is not thoroughness, it is a worse interface.
+    - Keep a round to roughly **five calls**, then **check in**: say how many open items remain
+      and what they block, and ask - as a call, like everything else - whether to keep going,
+      park the rest as markers, or park a named subset. Parking is safe *because* it writes
+      markers, and the gate then refuses to plan. Say that in the option's description.
     - **Stop when** every section the declared tier requires either carries a real contract or
       carries a typed marker; or the user says stop. Never stop merely because a number was hit.
     <!-- CHERRY-PICKED(github/spec-kit 39f2ac3, after v0.13.2): ask a real question, not a label -->
-    - Lead each with `**Question:** <full interrogative>?` - answerable as written. NEVER use a
-      topic label, a section heading or a requirement id as the question itself: "Retention
-      policy" and "FR-023" are subjects, not questions. An id may trail it:
-      `**Question:** How long are booking records kept after cancellation? (FR-023)`.
-    - Under it, one plain-language sentence on why it matters - what changes depending on the
-      answer. Everyday wording; introduce a term only if the same sentence defines it.
-    - For multiple-choice questions:
-       - **Analyze the options** and pick the most suitable, on best practice for this project
-         type, common patterns, risk (security, performance, maintainability), and the spec's own
-         stated goals and constraints.
-       - Present the recommendation first: `**Recommended:** Option [X] - <1-2 sentence reason>`.
-       - Then the options as a table:
-
-       | Option | Description |
-       |--------|-------------|
-       | A | <Option A description> |
-       | B | <Option B description> |
-       | C | <Option C description> (add D/E as needed, up to 5) |
-       | Short | Provide a different short answer (Include only if a free-form alternative fits) |
-
-       - After the table: `Reply with the option letter (e.g. "A"), accept the recommendation with
-         "yes", or give your own answer.`
-    - For short-answer questions:
-       - Give your **suggested answer** first: `**Suggested:** <proposal> - <brief reason>`, then
-         `Accept with "yes", or give your own.`
-       - **Do not impose a word limit on a contract.** Upstream constrains every short answer to
-         five words; that is fine for "which auth model?" and useless for "what does the payload
-         look like?". Ask for exactly the shape the spec section needs - a field list, an enum, a
-         rule - and say so.
+    - The `question` field holds a **full interrogative, answerable as written** - never a topic
+      label, a heading or a requirement id. "Retention policy" and "FR-023" are subjects; an id
+      may trail the question, not replace it.
+    - **The recommended option goes first and is the only one labelled**, and where the axis is
+      consent rather than correctness, nothing is recommended.
+    - **An answer off the list is the answer.** Somebody typing their own has told you the
+      question was framed on the wrong axis: record what they said, not the option it is nearest
+      to, say how you resolved it, and fix the question.
+    - **Do not impose a word limit on a contract.** Upstream caps every short answer at five
+      words; that is fine for "which auth model?" and useless for "what does the payload look
+      like?". Ask for the shape the section needs - a field list, an enum, a rule.
     - After each answer:
-       - "yes" / "recommended" / "suggested" accepts what you proposed.
        - **A deferral is an answer.** "Decide later", "ask the architect", "the designer owes us
          that" - record it, and write the matching typed marker so the gate holds it.
        - If the answer is ambiguous, ask once for disambiguation - it is the same question, not a
          new one.
+       <!-- PATCHED(repository-standards): ADR-033 -->
+       - **An answer that contradicts an Accepted record is a supersession, not a clarification.**
+         Do not write it into the spec. Say which record it collides with and route to
+         `/adr-write` or `/bdr-write`; the spec follows the record, never the other way round (R6).
        - Record it, then integrate it (step 6) before moving on.
     - Never reveal queued questions in advance.
     - If nothing is unclear at the start, say so plainly and stop.
@@ -188,8 +191,13 @@ Execution steps:
 6. Integration after EACH accepted answer (incremental update approach):
     - Maintain in-memory representation of the spec (loaded once at start) plus the raw file contents.
     - For the first integrated answer in this session:
-       - Ensure a `## Clarifications` section exists (create it just after the highest-level contextual/overview section per the spec template if missing).
-       - Under it, create (if not present) a `### Session YYYY-MM-DD` subheading for today.
+       <!-- PATCHED(repository-standards): "just after the highest-level contextual/overview
+            section" is a judgement, and the template's 16 headings offer several plausible
+            answers, so two independent runs placed the section in different spots - churn in
+            a file whose section order the specify step separately requires be preserved. The
+            template now carries a CLARIFY-ANCHOR comment and this names the position. -->
+       - Ensure a `## Clarifications` section exists. If it is missing, create it at the anchor the template marks (`CLARIFY-ANCHOR` in `specs/capability-spec.template.md`): immediately after `## Purpose`, before `## Scope`. The position is fixed rather than chosen, so a second session - possibly run by a different agent - lands in the same place.
+       - Under it, create (if not present) a `### Session YYYY-MM-DD` subheading for today. **Never add a second `## Clarifications` heading**: the gate reads the first one and stops, so everything under a duplicate is invisible to it, and the structure guard refuses the spec.
     - Append a bullet line immediately after acceptance: `- Q: <question> → A: <final answer>`.
     - Then immediately apply the clarification to the most appropriate section(s):
        <!-- PATCHED(repository-standards): routed to the sections capability-spec.template.md
@@ -225,14 +233,14 @@ Execution steps:
    - If it does NOT exist, skip this step silently.
    - If it exists:
      1. Read the checklist file.
-     2. Identify all GitHub task-list checkbox lines — lines matching `- [ ]`, `- [x]`, or `- [X]` (case-insensitive, tolerant of leading whitespace for nested items) outside of code fences. Ignore all other content (headings, notes, non-checkbox bullets, metadata).
+     2. Identify all GitHub task-list checkbox lines - lines matching `- [ ]`, `- [x]`, or `- [X]` (case-insensitive, tolerant of leading whitespace for nested items) outside of code fences. Ignore all other content (headings, notes, non-checkbox bullets, metadata).
      3. For each checkbox line, record its current marker state (checked or unchecked) and item text into a before-snapshot list.
      4. Re-evaluate each checkbox item against the **updated** spec (the version just saved in step 7).
      5. For each checkbox item, update only if the checked/unchecked state actually changes:
         - If the item now passes and was unchecked: change `[ ]` to `[x]`.
         - If the item now fails and was checked: change `[x]`/`[X]` to `[ ]`.
         - If the state is unchanged: leave the marker as-is (preserve existing case to avoid cosmetic diffs).
-     6. Save the updated checklist file. **Only toggle the `[ ]`/`[x]` marker portion of checkbox lines whose state changed.** All other file content — headings, metadata, notes, line ordering, whitespace — must remain unchanged to avoid noisy diffs.
+     6. Save the updated checklist file. **Only toggle the `[ ]`/`[x]` marker portion of checkbox lines whose state changed.** All other file content - headings, metadata, notes, line ordering, whitespace - must remain unchanged to avoid noisy diffs.
      7. Compare the before-snapshot with the current state to compute three lists for the Completion Report:
         - **Newly passing**: items that changed from unchecked to checked.
         - **Regressions**: items that changed from checked to unchecked.
@@ -253,14 +261,12 @@ Context for prioritization: $ARGUMENTS
 
 ## Completion Report
 
-Report completion (after questioning loop ends or early termination):
-- Number of questions asked and answered, and the number of markers written for what was not.
-- Path to updated spec.
-- Sections touched (list names).
-- Spec quality checklist status (if `FEATURE_DIR/checklists/requirements.md` was re-validated): show before/after pass counts (e.g., "Spec Quality Checklist: 12/16 → 15/16 items passing") and list any items that changed state — both newly checked (unchecked → checked) and any regressions (checked → unchecked). If any items remain unchecked, list them as areas needing attention.
-- Coverage summary table listing each taxonomy category with Status: Resolved (was Partial/Missing and addressed), Marked (unresolved and now carrying a typed marker - with the marker's type and owner), Clear (already sufficient).
-- If any Outstanding or Deferred remain, recommend whether to proceed to `/spec-plan` or run `/spec-clarify` again later post-plan.
-- Suggested next command.
+Read [`completion.md`](completion.md) when the loop is finished and you are reporting back.
+
+## Questions
+
+[`questions.md`](questions.md) carries the shape every call takes and the three declared calls this
+skill must make. Step 5 reads it as the loop runs, not here at the end.
 
 ## Done When
 

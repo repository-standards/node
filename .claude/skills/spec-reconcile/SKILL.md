@@ -19,10 +19,30 @@ truth - so the spec, the code, and the tests must agree.
    - spec says X but the code does Y,
    - code or tests encode behavior missing from the spec,
    - spec requires a scenario with no implementation,
-   - the implementation adds a side-effect described nowhere.
+   - the implementation adds a side-effect described nowhere,
+   - code that exists only to keep an **already-shipped** contract working - a
+     compatibility shim, a deprecated alias, a function body with no header, a
+     route kept alive for an old client.
 
 3. Resolve each: update the spec, fix the code, or explicitly record why. Prefer
-   making the spec accurate to the real behavior.
+   making the spec accurate to the real behavior - **and where that preference would
+   rewrite what "done" means, or move the capability's boundary, ask before it does.**
+   The calls are in "Questions this skill must ask", below. Bending the criteria to fit
+   what was built is the one resolution this skill cannot take on its own authority,
+   because it is the party that built it.
+
+   **A compatibility artifact is documented as one, or the record gets worse.**
+   Where the source of truth for some behavior is something already out in the
+   world - a previous release's compiled binary, a wire format in the field, a
+   published URL - the code preserving it is not what the capability is, and the
+   preference above would file it under current design. Give it its own
+   subsection naming what it preserves (the release, the consumer, the format)
+   and the condition for removing it, and leave the capability's contracts
+   describing the current shape. Deleting it from the spec is the opposite error:
+   it ships, so it cannot be silent. What counts as a breaking change in the
+   first place is a decision, not this skill's call - a repo with no recorded
+   compatibility policy gets a backlog item (`add-to-backlog`) or a record of its
+   own, and this step does not settle it by writing prose that implies one.
 
 4. **Flip the Open questions the change resolved (SD-7).** Specs drift in BOTH
    directions: if this change fixes something the spec lists under `## Open
@@ -34,6 +54,12 @@ truth - so the spec, the code, and the tests must agree.
    against each other: shared terms, invariants and contracts must not contradict
    across capabilities. A cross-spec contradiction is a finding - resolve it in this
    change if it belongs here, otherwise file a backlog item for it (`add-to-backlog`).
+
+   **When one side is `retired`, the contradiction resolves in one direction**
+   (ADR-036): the live spec wins, and the retired one is corrected to say what its
+   capability *did*, naming the change that superseded it. Correcting it is not
+   extending it, and `Status` stays `retired` - a retired spec is frozen against new
+   behaviour, never against telling the truth (R4).
 
 6. **Decision-record citations stay live (the altitude above the spec, `AGENTS.md`).**
    For each capability spec in scope, check every ADR/BDR it names or links - in the
@@ -76,12 +102,59 @@ truth - so the spec, the code, and the tests must agree.
    `data-model.md`, `quickstart.md` or `contracts/` the plan stage produced, and clear
    `specs/feature.json`. Report what was removed.
 
-   Two things survive on purpose: the spec, and anything the scaffolding recorded that is
-   still true - a decision belongs in a record, an unfinished thread in the backlog, an
-   unresolved question in the spec's **Open questions**. Move it before deleting; a task
-   list kept "just in case" is a second, staler description of a capability that already
-   has a living one, and the next reader cannot tell which is current.
+   Three things survive on purpose: the spec, `checklists/requirements.md` (the spec's own
+   quality record - `spec-specify` writes it when the spec is minted and `spec-clarify`
+   re-validates it on every later round, so it belongs to the spec and not to this piece of
+   work), and anything the scaffolding recorded that is still true - a decision belongs in a
+   record, an unfinished thread in the backlog, an unresolved question in the spec's
+   **Open questions**. Move it before deleting; a task list kept "just in case" is a second,
+   staler description of a capability that already has a living one, and the next reader
+   cannot tell which is current.
 
    If the work is not finished, say so and stop - the scaffolding stays until it is.
 
 No knowingly-contradicting spec merges (rule 8: no silent drift).
+
+## Questions this skill must ask
+
+Reconciliation is where a specification is rewritten to match what was actually built, which is
+the most defensible edit in the loop and the easiest place to launder a decision. Two of the
+resolutions available here are not this skill's to take alone, and the elicitation guard refuses
+the write to `specs/**/spec.md` until they have been put to somebody. They fire per
+reconciliation, not once per repository.
+
+Declared in `.claude/elicitation/points.json`; the shape and the provenance states are in
+`.claude/elicitation/README.md`. Each is a real `AskUserQuestion` call, in the language the user
+is writing in, with the point id in `metadata.source` and a header that says what it asks.
+
+### `[spec.acceptance]` Which side moves - the criteria or the code
+
+Fires **at step 3, before an Acceptance criterion is edited to describe what was built**. A
+divergence found here is not a spec error by default; it is a disagreement, and which side is
+wrong is somebody else's call.
+
+Call `AskUserQuestion` for point `[spec.acceptance]` - header **Acceptance**, `metadata.source` `spec.acceptance` - and ask: *The built behaviour and the acceptance criteria disagree on `<point>`. Does the criterion
+change to match what was built, or does the code change to match the criterion?* Say which
+divergences you found, one option per resolution, and say what each costs.
+
+Options, in order: **tell me now** (`human`) / **suggest it, I will check later** (`provisional`, plus a backlog row naming this point) / **leave a stub, do not guess** (`absent`, the divergence written into `## Open questions` rather than resolved)
+
+Acceptance criteria written by the party that will satisfy them are not criteria - and at this
+step, that party is this skill.
+
+Records to `docs/adoption-provenance.md`: the `spec.acceptance` row takes the state, who answered,
+the date, and the spec it edited as where the answer landed.
+
+### `[spec.scope]` Behaviour that was built and never specified
+
+Fires **when the code does something the spec never claimed** - the resolution that grows a
+capability rather than correcting it.
+
+Call `AskUserQuestion` for point `[spec.scope]` - header **Scope**, `metadata.source` `spec.scope` - and ask: *`<capability>` does `<behaviour>`, which no spec claims. Does it belong to this capability,
+somewhere else, or nowhere?* An unspecified behaviour absorbed silently is how two capabilities
+end up owning the same rule, and neither spec is wrong on its own.
+
+Options, in order: **tell me now** (`human`) / **suggest it, I will check later** (`provisional`, plus a backlog row naming this point) / **leave a stub, do not guess** (`absent`, a `[NEEDS CLARIFICATION: ...]` marker naming the behaviour)
+
+Records to `docs/adoption-provenance.md`: the `spec.scope` row takes the state, who answered, the
+date, and the spec it edited as where the answer landed.

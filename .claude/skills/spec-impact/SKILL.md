@@ -21,16 +21,46 @@ then find the ripple. This is analysis - do not edit code yet.
    and say so, and point at the BDR/ADR that retired it. A genuinely new need in
    that area is a new capability, specced fresh, not a reopening.
 
+   **Check `Status` on every capability this reaches, not only the primary** - the
+   ripple below finds retired specs too, and skipping them is how a retired spec
+   ends up stating something a later change made false. A retired **ripple** target
+   is not a stop: report it as a correction target (ADR-036), so the change fixes
+   what it falsified rather than leaving it.
+
 2. **Read** the primary spec and the code it maps to (`specs/capability-map.json`).
+   Read the topic's dossier too, if it has one (`docs/discovery/<topic>/`, ADR-024):
+   entries **newer** than its `Last reconciled:` stamp, plus anything still `new`/`open`,
+   are the material that has not reached this spec yet - and new material is the usual
+   reason a change to a shipped capability starts at all. Name those entries in the
+   output so `spec-update` knows which ones it is folding in; entries marked
+   `folded-into-spec` or `superseded-by:` are history and are never re-raised.
 
 3. **Find the ripple:**
    - **Other capability specs** whose behavior this touches (cross-domain). A
      payments change may touch `bookings`, `refunds`, `notifications`.
-   - **ADRs** - does the change need a new/superseding decision, or contradict an
-     Accepted ADR? If it contradicts one, stop: an ADR comes first.
+   - **Decision records, BDRs as well as ADRs** - does the change need a new or
+     superseding record, or contradict an Accepted one? Read **both streams**:
+     what a change is *forbidden* to do is usually a business constraint - a
+     licence boundary, a vendor or customer contract, a regulatory limit, a
+     persona call - and it is written in a BDR's `What this rules out`, the only
+     section that states a capability's non-goals. Reading the ADRs alone answers
+     a different question, and answers it "none". If the change contradicts an
+     Accepted record, stop: the record comes first, and it is superseded by a new
+     record, never edited (R6).
    - **Code / files** - which areas change (from the capability map + reading code):
      domain services, APIs, schemas, migrations, events, integrations, tests, UI,
      feature flags. Direct and indirect behavioral impact.
+   - **The other artifacts the repo keeps** - a change that contradicts a runbook is
+     wrong at 3 a.m. whatever the spec says, and a specs-records-code sweep never looks
+     there. Take each of these that exists and say which sentence this change falsifies,
+     or that it is untouched: `docs/runbooks/` (a procedure that walks an operator
+     through the behaviour being changed), `docs/personas.md` (a persona whose stated
+     job, or whose "must never lose", this removes), `docs/PRODUCT.md` (a scope or KPI
+     claim it contradicts), `docs/analytics.md` (an event it renames, drops or re-times)
+     and the backlog (a row whose definition of done this change now meets, or makes
+     impossible to meet). Grep the capability's own terms across `docs/` rather than
+     re-reading everything: a sentence that contradicts this change is a sentence that
+     names the thing being changed.
 
 4. **File what this change will not address now.** A ripple found above - an
    affected capability, a needed ADR/BDR, a code area - that this change deliberately
@@ -44,8 +74,11 @@ then find the ripple. This is analysis - do not edit code yet.
 
 - Primary capability.
 - Affected capabilities, with their spec paths.
-- ADR impact: none / new / supersede (link).
+- Decision-record impact, ADR **and** BDR: none / new / supersede / contradicts (link).
 - Code areas to change.
+- Other artifacts contradicted (runbooks, personas, PRODUCT, analytics, backlog rows) -
+  each one named with the line, or "none".
+- Unreconciled discovery entries for the topic (newer than the stamp, or still `new`/`open`), or "none".
 - Anything filed to the backlog because this change will not address it now.
 
 This drives `spec-update` (which specs to edit) and the technical plan.
