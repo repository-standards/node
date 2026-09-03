@@ -32,6 +32,11 @@ exception recording it sat beside the exceptions that mean something. What the s
 yet say - this path, or one per workspace package - is the core's to fix, and it is filed as
 SELF-11 rather than papered over here.
 
+One consequence lands in this repository's own adoption: it carried a `kind: file` exception
+for `vitest.config.ts`, waiving an entry that can no longer fail. A stale exception is the
+thing this change is against, so it is deleted, and the `stack-contract` spec's open question
+now says three entries rather than four - a measured claim, kept measured.
+
 `biome.json` deliberately stays required. The adaptation path prescribes a two-step Biome
 migration, so a repository following it correctly has no `biome.json` between the steps -
 which is a real, unfinished deviation from DECISIONS#3 and should read as one. `ADAPTING.md`
