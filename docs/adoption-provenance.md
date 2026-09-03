@@ -41,21 +41,21 @@ which as `scope`.
 | `adopt.language` | pending | - | - | - | - |
 | `adopt.layout` | pending | - | - | - | - |
 | `adopt.profile` | pending | - | - | - | - |
-| `adopt.intent` | pending | - | - | - | - |
+| `adopt.intent` | human | Łukasz | 2026-09-03 | migrate everything applicable; consumer-shaped stack-manifest entries declined by design, not left unfinished | `SELF-1` |
 | `adopt.evidence` | pending | - | - | - | - |
 | `adopt.continue` | pending | - | - | - | - |
 | `adopt.existing-material` | pending | - | - | - | - |
 | `adopt.records` | pending | - | - | - | - |
 | `adopt.personas` | pending | - | - | - | - |
-| `adopt.tracker` | pending | - | - | - | - |
-| `adopt.backlog` | pending | - | - | - | - |
+| `adopt.tracker` | human | Łukasz | 2026-09-03 | `backlog.md` stays the only tracker | - |
+| `adopt.backlog` | provisional | agent | 2026-09-03 | `backlog.md`, no attribution column | `SELF-9` |
 | `adopt.guards` | pending | - | - | - | - |
 | `adopt.commit-plan` | pending | - | - | - | - |
 | `green.product` | pending | - | - | - | - |
 | `green.conventions` | pending | - | - | - | - |
-| `green.stack` | pending | - | - | - | - |
-| `spec.scope` | pending | - | - | - | - |
-| `spec.acceptance` | pending | - | - | - | - |
+| `green.stack` | provisional | agent | 2026-09-03 | `stack.manifest.json` unchanged, `"profile": "core"` | `SELF-8` |
+| `spec.scope` | provisional | agent | 2026-09-03 | `specs/stack-contract/spec.md` Scope section carried forward unchanged; this run only added the missing Interface contracts section | `SELF-10` |
+| `spec.acceptance` | provisional | agent | 2026-09-03 | `specs/stack-contract/spec.md` Acceptance criteria carried forward unchanged | `SELF-10` |
 | `spec.unknowns` | pending | - | - | - | - |
 | `discover.materials` | pending | - | - | - | - |
 | `discover.decisions` | pending | - | - | - | - |

@@ -39,6 +39,10 @@
     "specs/**",
     "scripts/**",
     ".claude/**",
-    ".github/workflows/spec-guard.yml"
+    ".github/workflows/spec-guard.yml",
+    ".github/pull_request_template.md",
+    ".github/workflows/dashboard.yml",
+    ".github/workflows/gitleaks.yml",
+    ".github/workflows/standards-update-watch.yml"
   ]
 }

@@ -49,6 +49,23 @@ and what each check actually needs to run.
 | `files` | array | entries in the core manifest's file-entry schema (`path`, `adapt`, `required`, `purpose`, and `requiredKeys` where the entry is a merge) |
 | `guards` | array | entries in the core manifest's guard schema (`id`, `run`) |
 
+## Interface contracts
+
+There is no HTTP endpoint or callable function here - the interface is a filename the engine
+discovers by convention, and a shell command the engine runs. The consumer is
+`scripts/self-verify.mjs`, read here as this repository's own copy of the core's engine.
+
+| Consumer | Trigger | Exit / effect |
+|---|---|---|
+| stack-manifest read | any file matching `^stack(?:\.[A-Za-z0-9][A-Za-z0-9._-]*)?\.manifest\.json$` (`STACK_MANIFEST`), read in filename order | valid JSON: `files`, `sections`, `guards`, `exceptions` are concatenated onto the core manifest's own arrays before checking runs, so the run reports one drift number rather than two. Unparseable: `fail("stack", "<file> is present but unparseable: <message>")` |
+| profile resolution | `--profile` flag, else `manifest.profile` (this file's own copy), else `"scale"` | no `profile` key: `warning`, falls back to `scale` - the stricter tier, never the looser one. Unknown value: `warning`, treated as `scale`. `core` or `scale`: `note`, used as the default tier for both layers at once |
+| a guard's `run` command (e.g. `stack-check-all`) | executed as a shell command | exit 0 passes; nonzero is drift and cannot be waived by a manifest exception (see Rules). A `requires` entry (`kind: "command"` or `"path"`) whose prerequisite is absent: reported as not run, counted as neither drift nor adoption |
+| a `merge`-class entry's `requiredKeys` | checked once the entry's path is confirmed to exist | a named key absent from the merged file: drift on that entry, distinct from the file being missing outright |
+
+Errors surface through the same `note` / `warning` / `fail` calls every other manifest entry
+uses - there is no separate error channel for the technology layer, which is the mechanism
+behind the one-drift-number promise in Success metric above.
+
 ## Rules
 
 - A `merge`-class entry whose point is a policy block declares `requiredKeys` naming the keys
