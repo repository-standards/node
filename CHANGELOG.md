@@ -47,3 +47,38 @@ A second finding fell out of the same run: the verifier merges a stack manifest 
 core manifest is already present. Before this change, this repository's twelve stack file
 entries and its guard were read by nothing at all, while the published claim is one drift
 number across both layers.
+
+### Updated to the standard at 1.0.6, and a missing tool no longer reads as broken code (2026-09-03)
+
+This repository's copy had sat pinned to core's tree since commit `cef91d6`, unmoved through a
+month of the core's own commits. The delta between that commit and 1.0.6 (`308309a`) landed
+here: renamed skills (`cycle-open`/`cycle-close` became `sprint-open`/`sprint-close`,
+`docs/cycles/` became `docs/sprints/`), the elicitation layer (`.claude/elicitation/points.json`,
+the `elicitation-guard.mjs` hook, `docs/adoption-provenance.md`), the removal of
+`update-to-version` in favor of `update-to-latest`, the dashboard generator, the backlog
+archive and its guard, and the `.claude/settings.json` that wires this repository's own hooks
+in for the first time - they existed on disk before this change but nothing invoked them.
+
+`SELF-7` is done: the core shipped the `requires` field this stack's guard was blocked on, so
+`stack-check-all` now declares its two prerequisites (`pnpm` on `PATH`, `node_modules`
+present) and a missing toolchain reads as not-run rather than as the same drift a real lint
+failure would produce.
+
+The update surfaced three gaps of its own, all fixed in this same change rather than carried
+forward: `SPEC.md` was a stale `copy` entry, still on R1-R25 and missing the rules and
+embargo language core added since; `specs/stack-contract/spec.md` was missing the
+`## Interface contracts` section the buildable tier requires; and four files that arrived
+with the delta (`.github/pull_request_template.md`, `dashboard.yml`, `gitleaks.yml`,
+`standards-update-watch.yml`) were unclaimed by `specs/capability-map.json`.
+
+The elicitation ledger's six reached points are recorded in `docs/adoption-provenance.md` -
+two confirmed by a human (`adopt.tracker`, and `adopt.intent`: migrate everything applicable,
+with the consumer-shaped stack-manifest gap declined by design rather than left unfinished),
+four left provisional pending a decision (`adopt.backlog`, `green.stack`, `spec.scope`,
+`spec.acceptance` - tracked as `SELF-9`, `SELF-8` and `SELF-10`). `docs/adoption-assessment.md`
+and the alignment scope block in `backlog.md` now carry this repository's first real Gate
+2/Gate 5 artifacts, rating all eight passes against measured evidence rather than a template -
+nine tasks stand between here and full alignment, all recorded with an owner role.
+
+`self-verify.mjs` now reports `drift 4 - 96% adopted (88/92), 0 excepted`, every point of it
+tracing to `SELF-1`.
