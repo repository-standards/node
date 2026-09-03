@@ -17,7 +17,16 @@ PUSH_RE='(^|[^[:alnum:]_])git([[:space:]]+(-C[[:space:]]+[^[:space:]]+|-c[[:spac
 # `--force` with no tail restriction on purpose: git accepts any unambiguous abbreviation of a long
 # option, so --force-with-l and --force-if-inc are real force-pushes. Every one of them starts with
 # --force (--forc alone is ambiguous and git rejects it), and no benign push option shares the prefix.
-FORCE_RE='(--force|(^|[[:space:]])-[a-zA-Z]*f([[:space:]]|$)|(^|[[:space:]])\+[A-Za-z0-9_./-]+)'
+# The short flag is matched anywhere in its cluster, not only at the end of it. `-[a-zA-Z]*f`
+# followed by whitespace reads `git push -qf` as a force-push and `git push -fq` as an ordinary
+# one - the same push, one keystroke apart, and the second is the spelling nobody would think to
+# test. No other `git push` short option carries an f, so widening it costs no false positive.
+FORCE_RE='(--force|(^|[[:space:]])-[a-zA-Z]*f[a-zA-Z]*([[:space:]]|$)|(^|[[:space:]])\+[A-Za-z0-9_./-]+)'
+# Deleting a remote branch destroys published history as surely as rewriting it, and it is the
+# one destructive push that carries no force flag. `--de` is the shortest unambiguous abbreviation
+# git accepts (`--d` is ambiguous with `--dry-run`); `git push origin :branch` is the same delete
+# spelled as an empty source refspec, which is why the colon must follow whitespace and not a ref.
+DELETE_RE='(--de[a-z]*|(^|[[:space:]])-[a-zA-Z]*d[a-zA-Z]*([[:space:]]|$)|(^|[[:space:]]):[A-Za-z0-9_./-]+)'
 
 # Per segment, so a force flag in one command cannot be attributed to a `git push` in another - and
 # so an apostrophe in a commit message cannot swallow the flag the way whole-string quote-stripping
@@ -27,6 +36,9 @@ while IFS= read -r segment; do
   printf '%s' "${segment}" | grep -qE "${PUSH_RE}" || continue
   if printf '%s' "${segment}" | grep -qE "${FORCE_RE}"; then
     deny "Blocked by repository policy: never force-push or rewrite published history (--force, --force-with-lease, --force-if-includes, -f, +refspec). A normal git push is allowed. If a force-push is genuinely needed, hand the exact command to a human."
+  fi
+  if printf '%s' "${segment}" | grep -qE "${DELETE_RE}"; then
+    deny "Blocked by repository policy: never delete a remote branch (git push --delete, git push -d, git push origin :branch). Whoever still has work based on it loses the ref, and nothing on the remote records that it existed. A normal git push is allowed. If the branch genuinely has to go, hand the exact command to a human."
   fi
 done <<EOF
 $(split_segments "${CMD}")

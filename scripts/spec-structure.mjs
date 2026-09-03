@@ -6,13 +6,22 @@
 //      e.g. a leaked GitHub Spec Kit `specs/001-core/` folder. Capability specs live at
 //      `specs/<capability>/spec.md` (or named sub-specs `specs/<capability>/<name>.md`) -
 //      domain names, never numbers.
-//   2. Every capability spec names a **persona** it serves (ADR-006), when the repo has a
-//      `docs/personas.md` roster - a spec that serves no one is incomplete. Checked by a
-//      `**Serves:** \`<persona>\`` field, a roster-name mention, or a personas.md reference.
+//   2. Every capability spec names a **persona from the roster** it serves (ADR-006, R10),
+//      when the repo has a `docs/personas.md` - a spec that serves no one is incomplete,
+//      and so is one that serves someone who does not exist. The roster table is the
+//      constraint: a `**Serves:**` value naming nobody on it fails, and a roster the guard
+//      cannot read is reported rather than treated as a roster that forbids nothing.
 //   3. A spec's `**Status:**` is earned, not typed: one claiming `ready-to-develop` or
 //      `live` must pass the clarify gate. Nothing read or wrote that field, so the status
 //      the whole method reads as "this is settled" was decorative - a spec with four
 //      guards green and a failing gate still said ready-to-develop.
+//   4. A section heading appears once. A second `## Clarifications` - written instead of a
+//      new `### Session` under the existing one - splits the section every reader and the
+//      clarify gate take the first match of.
+//   5. A spec that declares the buildable tier carries the sections that make it
+//      buildable (R9). The template marked them REQUIRED and nothing read the template,
+//      so a buildable spec shipped without its contracts and the sections were
+//      retrofitted later, by hand, when somebody noticed.
 //
 // This is the "structure lint" half of specs/enforcement.md, made mechanical - the
 // complement to the coupling guard (spec-guard.mjs).
@@ -37,6 +46,12 @@ const base = baseIdx >= 0 ? args[baseIdx + 1] : null;
 
 const sh = (c) => execSync(c, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 
+// git quotes any path outside ASCII by default (`"specs/\321\206\320\265\320\275\321\213/spec.md"`),
+// and a quoted path matches no glob and opens no file. The standard explicitly supports specs
+// written in the repo's own language, so a capability directory named in Cyrillic or Chinese is
+// expected, not exotic - and it would arrive here unreadable. Ask git for the real bytes.
+const GIT = "git -c core.quotePath=false";
+
 // Walk specs/ on the filesystem - the fallback when git is absent (a fresh degit has
 // no .git) or tracks nothing there yet. A shipped guard never dumps a stack trace.
 const fsWalk = (dir, acc = []) => {
@@ -52,11 +67,11 @@ const fsWalk = (dir, acc = []) => {
 let files;
 try {
   let raw;
-  if (staged) raw = sh("git diff --cached --name-only --diff-filter=ACMR -- specs");
-  else if (base) raw = sh(`git diff --name-only --diff-filter=ACMR ${base}...HEAD -- specs`);
+  if (staged) raw = sh(`${GIT} diff --cached --name-only --diff-filter=ACMR -- specs`);
+  else if (base) raw = sh(`${GIT} diff --name-only --diff-filter=ACMR ${base}...HEAD -- specs`);
   else {
-    const tracked = sh("git ls-files specs");
-    const untracked = sh("git ls-files --others --exclude-standard -- specs");
+    const tracked = sh(`${GIT} ls-files specs`);
+    const untracked = sh(`${GIT} ls-files --others --exclude-standard -- specs`);
     raw = [tracked, untracked].filter(Boolean).join("\n");
     if (!raw) raw = fsWalk("specs").join("\n"); // brand-new repo, nothing there yet
   }
@@ -70,6 +85,8 @@ try {
   files = fsWalk("specs").filter((f) => f.startsWith("specs/"));
 }
 
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // --- check 1: no ticket-numbered spec paths ------------------------------------
 // A ticket-numbered segment: two or more leading digits then - or _ (Spec Kit's
 // NNN-feature). Catches specs/001-booking/, specs/cms/001-core, specs/x/017-change.md.
@@ -80,19 +97,45 @@ for (const f of files) {
   if (segment) numbered.push({ file: f, segment });
 }
 
-// --- check 2: every capability spec names a persona (ADR-006) ------------------
+// --- check 2: every capability spec serves a persona on the roster (ADR-006, R10) -----
 // A capability spec is specs/<capability>/<file>.md (depth >= 3), not a template or README.
-const ENGINE_ARTIFACTS = /\/(plan|tasks)\.md$|\/checklists\//; // scaffolding the engine writes (ADR-010: ephemeral)
+// Files under specs/ that the engine writes and that are not themselves capability specs -
+// so the persona gate below has no opinion about them. All six of them: `/spec-plan` is
+// documented to produce research.md in Phase 0 and data-model.md, quickstart.md and
+// contracts/ in Phase 1, and only plan.md and tasks.md were listed here - so
+// `--base <ref> --block`, the form CI runs, failed the persona gate on the other four in
+// every PR opened between /spec-plan and /spec-reconcile, a mid-workflow state the comment
+// beside the full-tree check already calls legitimate.
+//
+// The directory forms are anchored at `specs/<capability>/` on purpose: `contracts` and
+// `checklists` are ordinary words, and an unanchored `/contracts/` would read a capability
+// genuinely called that - `specs/contracts/spec.md` in a repo whose domain is contracts -
+// as scaffolding and exempt its whole directory from the persona gate.
+//
+// What is removable when the work closes is a narrower set and lives at
+// REMOVABLE_SCAFFOLDING below: not every file the engine writes is one the close deletes.
+const NOT_A_CAP_SPEC = /\/(plan|tasks|research|data-model|quickstart)\.md$|^specs\/[^/]+\/(checklists|contracts)\//;
 const isCapSpec = (f) =>
-  f.split("/").length >= 3 && f.endsWith(".md") && !f.includes(".template.") && !/\/readme\.md$/i.test(f) && !ENGINE_ARTIFACTS.test(f);
+  f.split("/").length >= 3 && f.endsWith(".md") && !f.includes(".template.") && !/\/readme\.md$/i.test(f) && !NOT_A_CAP_SPEC.test(f);
 
-const personaless = [];
+// An unfilled marker is not a persona, in either shape the shipped templates use. Only the
+// angle form was recognised, and the two readers below each tested for it separately - so
+// when personas.md moved its roster marker to the mustache form, an untouched template both
+// supplied a live roster entry named after the placeholder and satisfied a spec's `Serves`
+// field with the same string. One answer, both readers.
+const isPlaceholder = (s) => s.includes("<") || s.includes("{{");
+
+const personaless = []; // names nobody at all
+const offRoster = []; // names somebody the roster has never heard of
 let rosterMissing = false; // capability specs exist but no roster - the R10 gate has nothing to hold
 let rosterHeadingMissing = false; // a roster file the guard cannot find the roster in
+let rosterUnreadable = null; // a roster section no persona parses out of - an empty set forbids nothing
+let rosterNames = [];
 const personasPath = ["docs/personas.md", "personas.md"].find((p) => existsSync(p));
 if (!personasPath && files.some(isCapSpec)) rosterMissing = true;
 if (personasPath) {
   const roster = new Set();
+  let rosterLines = 0; // table lines under the heading, however they are written
   const personaLines = readFileSync(personasPath, "utf8").split("\n");
   // Only the roster section counts. The shipped file also carries a filled worked example,
   // and scanning the whole file reads those names as live personas - which would let a spec
@@ -114,23 +157,61 @@ if (personasPath) {
       continue;
     }
     if (!inRoster) continue;
+    if (/^\|/.test(line) && !/^\|[\s|:-]*\|?\s*$/.test(line)) rosterLines++; // not the |---| separator
     const m = line.match(/^\|\s*`([^`]+)`\s*\|/); // roster rows: | `Name` | ...
-    if (m && !m[1].includes("<")) roster.add(m[1].toLowerCase());
+    if (m && !isPlaceholder(m[1])) roster.add(m[1]); // as written - the failure quotes it back
   }
-  for (const f of hasRosterHeading ? files.filter(isCapSpec) : []) {
+  rosterNames = [...roster];
+
+  // An empty roster is not a permissive roster, it is an unread one. Every arm below is a
+  // membership test, so a roster that parses to nothing would pass every spec by having
+  // nothing left to contradict - which is exactly how this check hid: its first arm passed
+  // any non-placeholder `**Serves:**` string without consulting the roster at all, so
+  // stripping the backticks off every row changed no verdict. Say the roster could not be
+  // read; do not quietly check against an empty set.
+  const capSpecs = files.filter(isCapSpec);
+  if (hasRosterHeading && roster.size === 0 && capSpecs.length) rosterUnreadable = { lines: rosterLines };
+
+  const onRoster = (text) => {
+    const low = text.toLowerCase();
+    return rosterNames.some((n) => low.includes(n.toLowerCase()));
+  };
+  for (const f of hasRosterHeading && !rosterUnreadable ? capSpecs : []) {
     let body;
     try { body = readFileSync(f, "utf8"); } catch { continue; }
-    const low = body.toLowerCase();
-    const serves = body.match(/\*\*serves:\*\*\s*`([^`]+)`/i); // Serves: `Name`, not placeholder
-    const hasServes = serves && !serves[1].includes("<");
-    const namesRoster = [...roster].some((n) => low.includes(n));
-    // Deliberately NOT a plain `includes("personas.md")`: the shipped capability template
-    // carries `**Serves:** <persona from docs/personas.md>` in its placeholder, so that test
-    // passed every spec instantiated from the template - the template defeating the guard
-    // the template exists to satisfy. Prose that genuinely reasons about who this is for
-    // still counts, and an unfilled `Serves` placeholder no longer does.
-    const refsPersonas = /for whom/i.test(body);
-    if (!hasServes && !namesRoster && !refsPersonas) personaless.push(f);
+    // The whole `**Serves:**` value: all of its names, and all of its lines. A spec routinely
+    // serves two or three personas and says how it serves each, so reading only the first
+    // backticked name would make the rest invisible - and a value long enough to say that is
+    // a value long enough to wrap, so it is read on to the lines that continue it. Stopping
+    // at the blank line, next `**Field:**`, heading, list or table keeps the rest of the spec
+    // out of the value: the point of scoping to the field is that the field is the claim.
+    const lines = body.split("\n");
+    const at = lines.findIndex((l) => /\*\*Serves:\*\*/i.test(l));
+    let claim = "";
+    if (at >= 0) {
+      claim = lines[at].replace(/^[\s\S]*?\*\*Serves:\*\*/i, "");
+      for (const l of lines.slice(at + 1)) {
+        if (!l.trim() || /^\s*(\*\*|#{1,6}\s|\||[-*+]\s|\d+[.)]\s)/.test(l)) break;
+        claim += ` ${l}`;
+      }
+      claim = claim.replace(/<!--[\s\S]*?(-->|$)/g, "").replace(/`/g, "").trim();
+    }
+    // `<persona from docs/personas.md>` is the shipped template's placeholder - the question,
+    // not an answer. A value that is nothing but placeholders counts as no field at all, so a
+    // spec copied from the template and never filled in is reported as serving nobody rather
+    // than as serving a persona named "<persona from docs/personas.md>". Both marker shapes
+    // the templates use are stripped: when personas.md moved its roster marker to the
+    // mustache form, an angle-only test read the untouched placeholder as a filled claim.
+    const filled = /[\p{L}\p{N}]/u.test(claim.replace(/<[^>]*>/g, "").replace(/\{\{[^}]*\}\}/g, ""));
+    // A spec with no `Serves` field can still name its persona in prose - the roster is what
+    // must recognise the name, not the field. What no longer counts: a name the roster has
+    // never heard of, and prose that merely asks the question ("for whom") without answering
+    // it, both of which used to satisfy this check on their own.
+    if (filled) {
+      if (!onRoster(claim)) offRoster.push({ file: f, claim });
+    } else if (!onRoster(body)) {
+      personaless.push(f);
+    }
   }
 }
 
@@ -171,10 +252,126 @@ if (!existsSync(gatePath)) {
   }
 }
 
-// --- check 4 (warn only): committed engine scaffolding - ephemeral by rule -------
+// --- check 4: a section heading appears once -------------------------------------
+// The clarify gate greps for `^## Clarifications` and stops at the first hit; a reader
+// scanning for a section does the same. So a spec that grew a SECOND `## Clarifications`
+// - written instead of a new `### Session <date>` under the existing one - hides
+// everything below the split from both, and every guard stays green. Level 2 only:
+// `### Session <date>` and `### <Other capability>` repeat by design one level down.
+//
+// Fenced blocks and HTML comments are skipped: a spec quoting markdown, and the shipped
+// template's own guidance, are not the document's own structure. Line-by-line rather than
+// a strip-then-scan, so the report can name the lines that collide.
+const level2Headings = (body) => {
+  const found = [];
+  let inFence = false;
+  let inComment = false;
+  body.split("\n").forEach((raw, i) => {
+    let text = raw;
+    if (inComment) {
+      const end = text.indexOf("-->");
+      if (end < 0) return;
+      text = text.slice(end + 3);
+      inComment = false;
+    }
+    text = text.replace(/<!--[\s\S]*?-->/g, "");
+    const open = text.indexOf("<!--");
+    if (open >= 0) {
+      text = text.slice(0, open);
+      inComment = true;
+    }
+    if (/^\s*(```|~~~)/.test(text)) {
+      inFence = !inFence;
+      return;
+    }
+    if (inFence) return;
+    const m = text.match(/^##\s+(\S.*?)\s*$/);
+    if (m) found.push({ line: i + 1, heading: m[1] });
+  });
+  return found;
+};
+
+const duplicated = [];
+for (const f of files.filter(isCapSpec)) {
+  let body;
+  try { body = readFileSync(f, "utf8"); } catch { continue; }
+  const byName = new Map();
+  for (const h of level2Headings(body)) {
+    const key = h.heading.toLowerCase().replace(/\s+/g, " ");
+    byName.set(key, [...(byName.get(key) ?? []), h]);
+  }
+  for (const hits of byName.values()) {
+    if (hits.length > 1) duplicated.push({ file: f, heading: hits[0].heading, lines: hits.map((h) => h.line) });
+  }
+}
+
+// --- check 5: a buildable spec carries the sections that make it buildable (R9) --
+// The template marks three sections REQUIRED for the buildable tier, and nothing read
+// them: a spec shipped at that tier with no `## Data contracts` and no
+// `## Interface contracts`, and the gap was found by a person, months later.
+//
+// Only a spec that DECLARES `buildable` is held to them, and that boundary is deliberate.
+// R9 makes buildable the default, so a spec with no tier line is the same claim in
+// principle - but failing every undeclared spec in a repo mid-adoption is how a guard gets
+// switched off, and a switched-off guard checks nothing at all. An undeclared tier is
+// reported as a warning instead, so deleting the line is not a silent way out.
+//
+// `Algorithms & rules` is NOT in the list: the template requires it "where logic is
+// non-trivial", which is a judgment nothing here can make.
+const BUILDABLE_SECTIONS = ["Data contracts", "Interface contracts", "Acceptance criteria"];
+const NO_TIER = "(none)";
+const tierOf = (body) => {
+  const m = body.match(/^\*\*Spec tier:\*\*\s*(.+)$/m);
+  if (!m) return NO_TIER;
+  const value = m[1].replace(/<!--[\s\S]*$/, "").trim();
+  if (value.includes("|")) return NO_TIER; // the template's unfilled list of tiers
+  return value.replace(/[`*.]/g, "").trim().toLowerCase();
+};
+
+// The content under `## <heading>`, up to the next heading of the same or a higher level -
+// so a section whose body opens with a `###` sub-heading still counts as filled. HTML
+// comments are stripped first: the shipped template's sections are comment-only, and a
+// section carrying nothing but the template's instructions is an empty section.
+const sectionIsFilled = (body, heading) => {
+  const re = new RegExp(`^##\\s+${escapeRe(heading)}\\b.*$`, "im");
+  const at = body.search(re);
+  if (at < 0) return false;
+  const after = body.slice(at).replace(/^.*\n?/, "");
+  const end = after.search(/^#{1,2}\s/m);
+  const inner = (end < 0 ? after : after.slice(0, end)).replace(/<!--[\s\S]*?-->/g, "");
+  return inner.trim().length > 0;
+};
+
+const thin = [];
+const untiered = [];
+for (const f of files.filter(isCapSpec)) {
+  let body;
+  try { body = readFileSync(f, "utf8"); } catch { continue; }
+  const tier = tierOf(body);
+  // A named sub-spec (`specs/<cap>/<name>.md`) extends the capability's spec rather than
+  // repeating it, so it is held to the tier only when it claims one itself.
+  if (tier === NO_TIER) {
+    if (/\/spec\.md$/.test(f)) untiered.push(f);
+    continue;
+  }
+  if (tier !== "buildable") continue;
+  const missing = BUILDABLE_SECTIONS.filter((s) => !sectionIsFilled(body, s));
+  if (missing.length) thin.push({ file: f, missing });
+}
+
+// --- check 6 (warn only): committed engine scaffolding - ephemeral by rule -------
 // plan.md/tasks.md are working scaffolds the engine writes and the close removes.
 // Full-tree mode only (mid-work diffs legitimately carry them); never a violation.
-const staleScaffolding = !staged && !base ? files.filter((f) => ENGINE_ARTIFACTS.test(f)) : [];
+//
+// `checklists/` is deliberately NOT here, though it is not a capability spec either.
+// R13 and ADR-010 make plan.md and tasks.md ephemeral and name nothing else, and
+// spec-reconcile - the only step that actually deletes scaffolding - removes exactly
+// those. `checklists/requirements.md` is written by spec-specify when the spec is minted
+// and re-validated by spec-clarify on every later round, so warning about it told the
+// author to remove a file the standard's own skill had just told them to create, one
+// command earlier.
+const REMOVABLE_SCAFFOLDING = /\/(plan|tasks)\.md$/;
+const staleScaffolding = !staged && !base ? files.filter((f) => REMOVABLE_SCAFFOLDING.test(f)) : [];
 
 // --- report --------------------------------------------------------------------
 if (staleScaffolding.length) {
@@ -182,12 +379,28 @@ if (staleScaffolding.length) {
   for (const f of staleScaffolding) console.error(`  - ${f}`);
   console.error("");
 }
+if (untiered.length) {
+  console.error("\nspec-structure: WARN - capability specs that declare no `**Spec tier:**` (R9 makes buildable the default):");
+  for (const f of untiered) console.error(`  - ${f}`);
+  console.error("Declare `buildable` (and carry its required sections) or `behavioral` (and justify it).");
+  console.error("");
+}
 if (gateMissing) {
   console.error(`\nspec-structure: note - the clarify gate is not installed at ${gatePath},`);
   console.error("so a spec claiming `ready-to-develop` or `live` cannot be checked against it. Ship");
   console.error("`scripts/spec/` with the guards (it is a required manifest entry) to turn the check on.");
 }
-if (numbered.length === 0 && personaless.length === 0 && unearned.length === 0 && !rosterMissing && !rosterHeadingMissing) {
+if (
+  numbered.length === 0 &&
+  personaless.length === 0 &&
+  offRoster.length === 0 &&
+  unearned.length === 0 &&
+  duplicated.length === 0 &&
+  thin.length === 0 &&
+  !rosterMissing &&
+  !rosterHeadingMissing &&
+  !rosterUnreadable
+) {
   const note = personasPath ? "" : " (persona check skipped - no personas.md)";
   console.log(`spec-structure: OK (${files.length} spec paths)${note}`);
   process.exit(0);
@@ -203,10 +416,35 @@ if (numbered.length) {
   console.error("create or edit capability specs with /spec-update instead.");
 }
 
+const rosterList = () => (rosterNames.length > 8 ? `${rosterNames.slice(0, 8).join(", ")}, ...` : rosterNames.join(", "));
+
 if (personaless.length) {
   console.error("\nspec-structure: capability specs with no persona named (ADR-006 - a spec serves someone):");
   for (const f of personaless) console.error(`  - ${f}`);
   console.error('\nAdd a `**Serves:** `<persona>`` field (from docs/personas.md) - or name the persona in the spec.');
+  console.error(`The roster reads: ${rosterList()}.`);
+}
+
+if (offRoster.length) {
+  console.error("\nspec-structure: capability specs serving a persona who is not on the roster (R10):");
+  for (const { file, claim } of offRoster) console.error(`  - ${file}   serves "${claim}"`);
+  console.error(`\nThe roster in ${personasPath} is the constraint, and it reads: ${rosterList()}.`);
+  console.error("A persona described anywhere else - in the spec, in the worked example, in somebody's");
+  console.error("head - does not exist as far as R10 is concerned. Either serve one who is on the roster,");
+  console.error("or add this one to the roster table first, which is the decision the gate is asking for.");
+}
+
+if (thin.length) {
+  console.error("\nspec-structure: buildable-tier specs missing the sections that make them buildable (R9):");
+  for (const { file, missing } of thin) {
+    console.error(`  - ${file}   missing: ${missing.map((s) => `## ${s}`).join(", ")}`);
+  }
+  console.error("\nA buildable spec carries its contracts: the data it owns, the interface it exposes, and");
+  console.error("acceptance criteria concrete enough to become tests. A section that genuinely does not");
+  console.error('apply keeps its heading and says so in one line ("None - this capability persists nothing"),');
+  console.error("the same way `## Open questions` says \"None known.\" - a dropped heading and an empty one");
+  console.error("read identically to everyone downstream. If the capability really cannot be specified to");
+  console.error("that depth, declare `**Spec tier:** behavioral` and justify it in the spec (R9).");
 }
 
 if (unearned.length) {
@@ -220,6 +458,17 @@ if (unearned.length) {
   console.error("a healthy state and can last weeks. A status nothing checks is a status nobody can trust.");
 }
 
+if (duplicated.length) {
+  console.error("\nspec-structure: a section heading appears more than once in one spec:");
+  for (const { file, heading, lines } of duplicated) {
+    console.error(`  - ${file}   '## ${heading}' at lines ${lines.join(", ")}`);
+  }
+  console.error("\nEverything a reader and the clarify gate look for is taken from the FIRST match, so the");
+  console.error("second section is invisible to both while every guard stays green. Merge them: a later");
+  console.error("clarify session is a new `### Session YYYY-MM-DD` under the existing `## Clarifications`,");
+  console.error("not a second copy of the heading.");
+}
+
 if (rosterHeadingMissing) {
   console.error(`\nspec-structure: ${personasPath} has no '## The roster' section, so the guard cannot tell`);
   console.error("a live persona from a name in the worked example, and the persona gate (ADR-006) has");
@@ -227,6 +476,15 @@ if (rosterHeadingMissing) {
   console.error("'## The roster' even when the personas themselves are written in another language, because");
   console.error("a translated heading does not make the check speak that language, it makes it read the");
   console.error("whole file and pass a spec that serves an example.");
+}
+
+if (rosterUnreadable) {
+  console.error(`\nspec-structure: no persona could be read from the roster in ${personasPath}`);
+  console.error(`(${rosterUnreadable.lines} table line(s) seen under '## The roster'). A roster row is`);
+  console.error("`| `Name + role` | ... |` - the name in backticks, and a `<placeholder>` name is not filled in.");
+  console.error("This is a failure rather than a skip on purpose: the persona gate is a membership test,");
+  console.error("so a roster that parses to nothing passes every spec by having nothing left to contradict.");
+  console.error("An unreadable roster and an obeyed one looked identical here for a release.");
 }
 
 if (rosterMissing) {

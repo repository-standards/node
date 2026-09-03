@@ -5,10 +5,22 @@
 | **Status** | Proposed |
 | **Date** | YYYY-MM-DD |
 | **Author** | {{AUTHOR}} |
+| **Decided by** | the author |
 
 <!-- An Accepted record is never edited into a different decision. When it stops being
      true, flip Status to `Superseded` and name the record that replaced it in the row
      above; the text below stays as it was written. -->
+
+<!-- Keep it short. Length is a cost, not a sign of rigour: write the shortest record that
+     still answers *why* for someone who was not in the room, and let a section with nothing
+     to say be one line. Comprehensive means every section is answered, not that each answer
+     is long. A record nobody finishes reading fails at the only job it has. -->
+
+<!-- "Decided by" is what made this binding, not who typed it - and on the business side it
+     is the row most often needed: a steering group, a client sign-off, a board or committee
+     vote. "The author" is a real answer where the author could genuinely make the call.
+     Where a body decided, record it as that body defines a decision - name, date, tally,
+     quorum met. -->
 
 ## Context
 
@@ -38,6 +50,17 @@ that loses is the thing a future reader most needs to know was considered.
 - Trade-offs accepted: ...
 - Follow-ups: ...
 
+## Confirmation
+
+How compliance with this decision is verified in practice - the guard, test, CI check, review
+step, config value, or the spec / doc it changes. **Name the enforcement point; do not design
+it here** (which table, which service, which library is the ADR's job - link it). A business
+decision with a technical consequence and no named check is the one that quietly stops being
+followed: "how we would know we were wrong" below says how you would learn the decision was a
+mistake, and this says how you would learn it is not being kept. If nothing confirms it yet,
+say so plainly - an unconfirmed decision is a red flag, and on privacy, money or safety it is
+the whole risk.
+
 ## What this rules out
 
 The non-goals that come with the decision - what it commits us to *not* doing. This is the
@@ -54,6 +77,11 @@ months without re-running this discussion.
 
 The business signal that would reopen this - a metric threshold, a market shift, a
 policy change.
+
+Required: `scripts/decision-records-check.mjs` fails on any record still standing that leaves
+this section out, empty, or still carrying this prompt. Where the decision genuinely has no such
+signal, write that rather than inventing a threshold. Superseded and rejected records are
+exempt.
 
 ## Related
 
