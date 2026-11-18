@@ -31,11 +31,11 @@
     "teardown:test-stack": "docker compose -f docker-compose.test.yml down -v"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.0",
-    "@vitest/coverage-v8": "3.2.4",
-    "prettier": "3.8.5",
-    "turbo": "2.10.0",
-    "typescript": "6.0.3",
-    "vitest": "3.2.4"
+    "@biomejs/biome": "2.6.7",
+    "@vitest/coverage-v8": "5.1.0",
+    "prettier": "3.10.0",
+    "turbo": "2.11.11",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
   }
 }

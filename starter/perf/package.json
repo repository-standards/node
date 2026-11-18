@@ -9,7 +9,7 @@
     "perf:compare": "node compare.mjs"
   },
   "devDependencies": {
-    "chrome-launcher": "1.2.1",
-    "lighthouse": "13.4.0"
+    "chrome-launcher": "1.2.3",
+    "lighthouse": "13.6.0"
   }
 }

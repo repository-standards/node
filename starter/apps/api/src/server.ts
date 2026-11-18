@@ -9,7 +9,7 @@
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyError, type FastifyInstance, LogController } from "fastify";
 import { config } from "./config.ts";
 import { sessionGate } from "./middleware/session-gate.ts";
 import { healthRoutes } from "./routes/health.ts";
@@ -34,7 +34,8 @@ export async function buildServer(): Promise<FastifyInstance> {
         censor: "[redacted]",
       },
     },
-    disableRequestLogging: true, // we log via the onResponse hook below, with our own shape
+    // we log via the onResponse hook below, with our own shape
+    logController: new LogController({ disableRequestLogging: true }),
   });
 
   // Cross-cutting plugins (the "middleware" layer). Order matters.
@@ -50,7 +51,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   app.addHook("onRequest", sessionGate);
 
   // One error contract for the whole surface.
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler<FastifyError>((error, request, reply) => {
     const status = error.statusCode ?? 500;
     if (status >= 500) request.log.error({ err: error }, "unhandled error");
     reply.status(status).send({

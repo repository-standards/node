@@ -76,11 +76,12 @@ boundaries). Nx is the documented escape hatch, not the default.
 
 ## 3. Lint + format - Biome
 
-**Pick:** Biome as the one linter+formatter; Prettier scoped to `*.scss` only (Biome
-does not format SCSS). One tool, one config, 10-50x faster than ESLint in CI, a11y
-preset included. The gap: no type-aware rules needing the TS language service, and some
-framework plugins have no Biome equivalent. If you truly need one of those, add a
-minimal ESLint alongside - never as the primary.
+**Pick:** Biome as the one linter+formatter; Prettier scoped to `*.scss` only. Biome 2.6
+does format SCSS now, but it wraps multi-value declarations differently from Prettier, so
+`biome.json` excludes `**/*.scss` and one tool owns each file type. One tool, one config,
+10-50x faster than ESLint in CI, a11y preset included. The gap: no type-aware rules
+needing the TS language service, and some framework plugins have no Biome equivalent. If
+you truly need one of those, add a minimal ESLint alongside - never as the primary.
 
 ## 4. TypeScript - strict, target stratified by layer
 
