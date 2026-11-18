@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.7/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -20,7 +20,8 @@
       "!**/playwright-report",
       "!**/*.prisma",
       "!**/next-env.d.ts",
-      "!**/*.sql"
+      "!**/*.sql",
+      "!**/*.scss"
     ]
   },
   "formatter": {
@@ -52,8 +53,8 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "a11y": { "recommended": true },
+      "preset": "recommended",
+      "a11y": { "preset": "recommended" },
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error",

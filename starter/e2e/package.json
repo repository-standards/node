@@ -9,6 +9,6 @@
     "test:e2e:ui": "playwright test --config ../playwright.config.ts --ui"
   },
   "devDependencies": {
-    "@playwright/test": "1.56.0"
+    "@playwright/test": "1.65.0"
   }
 }
