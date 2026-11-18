@@ -74,8 +74,9 @@ another stack.
 
 The row above says `pnpm import` "converts the existing lockfile" as if that holds for
 whatever the repo showed up with. It does not. Tested this week against two real
-brownfield repos, both against this stack's pinned pnpm (11.1.2 - if a different `pnpm`
-is the one actually on PATH, that mismatch is the first thing to check, see the yarn row):
+brownfield repos, both against pnpm 11.1.2 (this stack now pins 12.19.0 and these results
+were not re-run on it - if a different `pnpm` is the one actually on PATH, that mismatch is
+the first thing to check, see the yarn row):
 
 | From | Command | What actually happens |
 |---|---|---|
